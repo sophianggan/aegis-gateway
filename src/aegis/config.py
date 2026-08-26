@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     database_url: str = "postgresql://aegis:aegis@localhost:5432/aegis"
     jwt_secret: SecretStr = Field(default=SecretStr("development-only-secret-change-me"))
+    jwt_issuer: str = "aegis.local"
+    jwt_audience: str = "aegis-gateway"
     audit_hmac_key: SecretStr = Field(default=SecretStr("development-only-audit-key-change"))
     model_provider: Literal["deterministic", "openai-compatible"] = "deterministic"
     model_base_url: str = "http://localhost:11434/v1"
@@ -32,4 +34,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
