@@ -16,4 +16,3 @@ def get_principal(
 ) -> Principal:
     container = get_container(request)
     return container.authenticator.authenticate(authorization)
-

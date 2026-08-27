@@ -54,4 +54,3 @@ async def verify_audit_chain(
 
         raise AuthorizationError("auditor role is required")
     return {"valid": await container.audit.verify(request_id)}
-

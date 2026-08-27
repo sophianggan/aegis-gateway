@@ -66,4 +66,3 @@ class AuditTrail:
     async def stream(self, request_id: UUID) -> AsyncIterator[AuditEvent]:
         async for event in self._repository.stream(request_id):
             yield event
-

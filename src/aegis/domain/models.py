@@ -129,4 +129,3 @@ class AuditEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
     previous_hash: str = ""
     event_hash: str = ""
-

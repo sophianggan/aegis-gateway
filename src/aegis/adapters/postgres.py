@@ -131,4 +131,3 @@ class PostgresRevocationStore:
             "SELECT EXISTS(SELECT 1 FROM revoked_tokens WHERE token_id = $1)", token_id
         )
         return bool(value)
-

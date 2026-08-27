@@ -63,9 +63,6 @@ def test_rejects_token_signed_by_another_key(authenticator: TokenAuthenticator) 
             audit_hmac_key=SecretStr("test-audit-key-that-is-long-enough"),
         )
     )
-    token = other.issue_development_token(
-        subject="casey", clearance=Classification.INTERNAL
-    )
+    token = other.issue_development_token(subject="casey", clearance=Classification.INTERNAL)
     with pytest.raises(AuthenticationError):
         authenticator.authenticate(f"Bearer {token}")
-

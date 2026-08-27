@@ -17,4 +17,3 @@ class QueryResult(BaseModel):
     citations: list[Citation]
     filtered_field_count: int
     policy_summary: str
-

@@ -48,4 +48,3 @@ class InMemoryRevocationStore:
 
     def revoke(self, token_id: str) -> None:
         self._revoked.add(token_id)
-

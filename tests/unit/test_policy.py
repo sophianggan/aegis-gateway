@@ -86,4 +86,3 @@ def test_safe_context_omits_fully_denied_records() -> None:
     assert len(evaluations) == 2
     assert len(context) == 1
     assert context[0]["record_id"] == str(allowed.id)
-

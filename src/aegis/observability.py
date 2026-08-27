@@ -57,4 +57,3 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             duration_ms=round((time.perf_counter() - started) * 1000, 2),
         )
         return response
-

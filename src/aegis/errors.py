@@ -31,4 +31,3 @@ class PolicyViolationError(AegisError):
 class UpstreamModelError(AegisError):
     code = "upstream_model_error"
     status_code = 502
-

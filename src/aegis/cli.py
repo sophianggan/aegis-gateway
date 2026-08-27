@@ -30,14 +30,19 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _load_migrations() -> list[tuple[str, str]]:
+    root = Path(__file__).resolve().parents[2]
+    return [(path.name, path.read_text()) for path in sorted((root / "migrations").glob("*.sql"))]
+
+
 async def _migrate() -> None:
     settings = get_settings()
     connection = await asyncpg.connect(settings.database_url)
     try:
-        root = Path(__file__).resolve().parents[2]
-        for path in sorted((root / "migrations").glob("*.sql")):
-            await connection.execute(path.read_text())
-            print(f"applied {path.name}")
+        migrations = await asyncio.to_thread(_load_migrations)
+        for name, sql in migrations:
+            await connection.execute(sql)
+            print(f"applied {name}")
     finally:
         await connection.close()
 
@@ -73,4 +78,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

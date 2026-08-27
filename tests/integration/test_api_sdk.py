@@ -14,7 +14,7 @@ from aegis.main import create_app
 from aegis_sdk import AegisClient, AegisClientError
 
 
-def test_settings() -> Settings:
+def runtime_settings() -> Settings:
     return Settings(
         environment="test",
         persistence="memory",
@@ -24,7 +24,7 @@ def test_settings() -> Settings:
 
 
 async def configured_app() -> tuple[FastAPI, Container, str]:
-    settings = test_settings()
+    settings = runtime_settings()
     container = Container.build(settings)
     for record in DEMO_RECORDS:
         await container.records.put(record)

@@ -38,12 +38,17 @@ class InputGuard:
         (
             "secret_extraction",
             Severity.HIGH,
-            re.compile(r"\b(reveal|print|return|show)\b.{0,40}\b(system prompt|secret|token|credential)", re.I),
+            re.compile(
+                r"\b(reveal|print|return|show)\b.{0,40}\b(system prompt|secret|token|credential)",
+                re.I,
+            ),
         ),
         (
             "policy_bypass",
             Severity.HIGH,
-            re.compile(r"\b(bypass|disable|evade)\b.{0,40}\b(policy|filter|guard|restriction)", re.I),
+            re.compile(
+                r"\b(bypass|disable|evade)\b.{0,40}\b(policy|filter|guard|restriction)", re.I
+            ),
         ),
         (
             "role_reassignment",
@@ -80,4 +85,3 @@ class InputGuard:
                 details={"rules": [finding.rule for finding in result.findings]},
             )
         return result
-

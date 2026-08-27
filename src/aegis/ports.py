@@ -27,4 +27,3 @@ class ModelProvider(Protocol):
 
 class RevocationStore(Protocol):
     async def is_revoked(self, token_id: str) -> bool: ...
-

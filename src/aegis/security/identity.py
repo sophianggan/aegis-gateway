@@ -74,4 +74,3 @@ class TokenAuthenticator:
             "aud": self._audience,
         }
         return jwt.encode(payload, self._secret, algorithm=self.algorithm)
-

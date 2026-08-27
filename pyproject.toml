@@ -63,3 +63,7 @@ ignore = ["S101"]
 python_version = "3.11"
 strict = true
 packages = ["aegis", "aegis_sdk"]
+
+[[tool.mypy.overrides]]
+module = "asyncpg.*"
+ignore_missing_imports = true

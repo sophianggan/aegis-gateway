@@ -71,4 +71,3 @@ class PolicyEngine:
             if item.decision.allowed_fields
         ]
         return context, evaluated
-

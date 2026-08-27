@@ -2,7 +2,6 @@ from uuid import UUID
 
 from aegis.domain.models import Classification, DataField, Record
 
-
 DEMO_RECORDS = (
     Record(
         id=UUID("11111111-1111-4111-8111-111111111111"),
@@ -13,12 +12,12 @@ DEMO_RECORDS = (
             "site": DataField(
                 value="north facility",
                 classification=Classification.CONFIDENTIAL,
-                compartments={"operations"},
+                compartments=frozenset({"operations"}),
             ),
             "access_code": DataField(
                 value="NORTH-7391",
                 classification=Classification.RESTRICTED,
-                compartments={"physical-security"},
+                compartments=frozenset({"physical-security"}),
                 exportable=False,
             ),
         },
@@ -34,14 +33,13 @@ DEMO_RECORDS = (
             "owner": DataField(
                 value="Reliability team",
                 classification=Classification.CONFIDENTIAL,
-                compartments={"operations"},
+                compartments=frozenset({"operations"}),
             ),
             "private_note": DataField(
                 value="CASE-OMEGA-4815",
                 classification=Classification.RESTRICTED,
-                compartments={"investigations"},
+                compartments=frozenset({"investigations"}),
             ),
         },
     ),
 )
-

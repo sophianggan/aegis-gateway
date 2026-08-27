@@ -109,4 +109,3 @@ class AegisClient:
             return payload
         except (ValueError, TypeError) as exc:
             raise AegisClientError("gateway returned malformed JSON") from exc
-

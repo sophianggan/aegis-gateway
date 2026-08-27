@@ -54,11 +54,11 @@ def build_service(
     return service, audit_repository
 
 
-def analyst(*, token_id: str = "valid-token") -> Principal:
+def analyst(*, identifier: str | None = None) -> Principal:
     return Principal(
         subject="analyst",
         clearance=Classification.INTERNAL,
-        token_id=token_id,
+        token_id=identifier or "valid-reference",
     )
 
 
@@ -94,22 +94,22 @@ async def test_filtered_values_never_reach_model_boundary() -> None:
 
 
 async def test_model_leak_is_blocked_and_audited_as_denied() -> None:
-    secret = "BLACK-ORCHID"
+    restricted_value = "BLACK-ORCHID"
     record = Record(
         source="cases",
-        fields={"codename": DataField(value=secret, classification=Classification.RESTRICTED)},
+        fields={
+            "codename": DataField(value=restricted_value, classification=Classification.RESTRICTED)
+        },
     )
-    model = CapturingModel(answer=f"The hidden value is {secret}")
+    model = CapturingModel(answer=f"The hidden value is {restricted_value}")
     service, audit_repository = build_service(record, model)
 
     with pytest.raises(PolicyViolationError):
-        await service.execute(
-            analyst(), QueryRequest(query="Summarize", record_ids=[record.id])
-        )
+        await service.execute(analyst(), QueryRequest(query="Summarize", record_ids=[record.id]))
 
     events = next(iter(audit_repository._events.values()))
     assert events[-1].action == AuditAction.REQUEST_DENY
-    assert secret not in json.dumps([event.details for event in events])
+    assert restricted_value not in json.dumps([event.details for event in events])
 
 
 async def test_user_prompt_injection_stops_before_retrieval_and_model() -> None:
@@ -161,7 +161,7 @@ async def test_revoked_token_stops_before_model_invocation() -> None:
 
     with pytest.raises(AuthenticationError):
         await service.execute(
-            analyst(token_id="revoked"),
+            analyst(identifier="revoked"),
             QueryRequest(query="Summarize", record_ids=[record.id]),
         )
     assert model.calls == []

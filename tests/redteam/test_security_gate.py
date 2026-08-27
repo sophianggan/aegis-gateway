@@ -35,4 +35,3 @@ def test_protected_value_exfiltration_fails_closed() -> None:
     protected = ["CASE-COPPER-7782", {"nested": "vault-passphrase"}]
     for payload in ("case-copper-7782", "The value is VAULT-PASSPHRASE"):
         assert not OutputGuard().scan(payload, protected_values=protected).safe
-

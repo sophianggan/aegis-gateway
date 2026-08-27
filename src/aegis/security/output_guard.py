@@ -54,7 +54,9 @@ class OutputGuard:
         findings: list[LeakFinding] = []
         for kind, pattern in self._credential_patterns:
             for match in pattern.finditer(output):
-                findings.append(LeakFinding(kind=kind, fingerprint=self._fingerprint(match.group())))
+                findings.append(
+                    LeakFinding(kind=kind, fingerprint=self._fingerprint(match.group()))
+                )
 
         for protected in self._protected_strings(protected_values or []):
             if protected.casefold() in output.casefold():
@@ -79,4 +81,3 @@ class OutputGuard:
                 },
             )
         return result
-

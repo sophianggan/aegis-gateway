@@ -56,4 +56,3 @@ def test_output_guard_does_not_return_raw_secret_in_error() -> None:
     with pytest.raises(PolicyViolationError) as captured:
         OutputGuard().enforce("leaked value: red-sparrow", protected_values=["red-sparrow"])
     assert "red-sparrow" not in str(captured.value.details)
-
