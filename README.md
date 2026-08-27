@@ -118,7 +118,7 @@ pytest -m redteam tests/redteam
 docker build -t aegis-gateway:local .
 ```
 
-The current suite contains 69 tests and enforces at least 85% branch-aware coverage. CI
+The current suite contains 70 tests and enforces at least 85% branch-aware coverage. CI
 also performs dependency auditing and an immutable container build.
 
 ## Repository map
@@ -146,4 +146,3 @@ examples/              executable local demonstration
 
 This is a reference implementation, not a compliance certification. Adapt classification,
 identity, retention, and review controls to the environment in which it is deployed.
-
