@@ -1,0 +1,58 @@
+name: aegis
+
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: aegis
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development-password}
+    volumes:
+      - aegis-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d aegis"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [data]
+
+  migrate:
+    build: .
+    command: ["aegis", "migrate"]
+    environment: &runtime-environment
+      AEGIS_DATABASE_URL: postgresql://aegis:${POSTGRES_PASSWORD:-local-development-password}@database:5432/aegis
+      AEGIS_PERSISTENCE: postgres
+      AEGIS_JWT_SECRET: ${AEGIS_JWT_SECRET:-local-jwt-secret-change-before-deploy}
+      AEGIS_AUDIT_HMAC_KEY: ${AEGIS_AUDIT_HMAC_KEY:-local-audit-secret-change-before-deploy}
+    depends_on:
+      database:
+        condition: service_healthy
+    networks: [data]
+
+  gateway:
+    build: .
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    environment:
+      <<: *runtime-environment
+      AEGIS_ENVIRONMENT: development
+      AEGIS_MODEL_PROVIDER: deterministic
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    networks: [edge, data]
+
+networks:
+  edge: {}
+  data:
+    internal: true
+
+volumes:
+  aegis-data: {}
+
