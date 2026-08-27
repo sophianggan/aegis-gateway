@@ -31,8 +31,15 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _load_migrations() -> list[tuple[str, str]]:
-    root = Path(__file__).resolve().parents[2]
-    return [(path.name, path.read_text()) for path in sorted((root / "migrations").glob("*.sql"))]
+    candidates = (
+        Path.cwd() / "migrations",
+        Path(__file__).resolve().parents[2] / "migrations",
+    )
+    for directory in candidates:
+        paths = sorted(directory.glob("*.sql"))
+        if paths:
+            return [(path.name, path.read_text()) for path in paths]
+    raise FileNotFoundError("no SQL migrations found in runtime or project directories")
 
 
 async def _migrate() -> None:
