@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aegis-config
+data:
+  AEGIS_ENVIRONMENT: production
+  AEGIS_PERSISTENCE: postgres
+  AEGIS_LOG_LEVEL: INFO
+  AEGIS_MODEL_PROVIDER: openai-compatible
+  AEGIS_MODEL_BASE_URL: http://model-boundary.models.svc.cluster.local/v1
+  AEGIS_MODEL_NAME: approved-model
+
