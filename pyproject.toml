@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Policy-enforced AI gateway for sensitive data environments"
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "Apache-2.0" }
+license = { text = "MIT" }
 authors = [{ name = "Sophie" }]
 dependencies = [
   "asyncpg>=0.29,<1",
