@@ -15,16 +15,19 @@ from aegis.observability import RequestContextMiddleware, configure_logging
 
 def create_app(*, settings: Settings | None = None, container: Container | None = None) -> FastAPI:
     runtime_settings = settings or get_settings()
-    runtime_container = container or Container.build(runtime_settings)
     configure_logging(runtime_settings.log_level)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
+        runtime_container = container
+        if runtime_container is None:
+            if runtime_settings.persistence == "postgres":
+                runtime_container = await Container.build_postgres(runtime_settings)
+            else:
+                runtime_container = Container.build(runtime_settings)
         app.state.container = runtime_container
         yield
-        close = getattr(runtime_container.model, "close", None)
-        if close is not None:
-            await close()
+        await runtime_container.close()
 
     app = FastAPI(
         title="Aegis Gateway",
@@ -32,7 +35,8 @@ def create_app(*, settings: Settings | None = None, container: Container | None 
         description="Policy-enforced access to model-assisted analysis.",
         lifespan=lifespan,
     )
-    app.state.container = runtime_container
+    if container is not None:
+        app.state.container = container
     app.add_middleware(RequestContextMiddleware)
     app.include_router(router)
 

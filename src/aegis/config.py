@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     environment: Literal["development", "test", "production"] = "development"
     log_level: str = "INFO"
     database_url: str = "postgresql://aegis:aegis@localhost:5432/aegis"
+    persistence: Literal["memory", "postgres"] = "memory"
+    database_pool_min_size: int = Field(default=1, ge=1, le=20)
+    database_pool_max_size: int = Field(default=10, ge=1, le=100)
     jwt_secret: SecretStr = Field(default=SecretStr("development-only-secret-change-me"))
     jwt_issuer: str = "aegis.local"
     jwt_audience: str = "aegis-gateway"
