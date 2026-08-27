@@ -10,11 +10,13 @@ from aegis.api.routes import router
 from aegis.config import Settings, get_settings
 from aegis.container import Container
 from aegis.errors import AegisError
+from aegis.observability import RequestContextMiddleware, configure_logging
 
 
 def create_app(*, settings: Settings | None = None, container: Container | None = None) -> FastAPI:
     runtime_settings = settings or get_settings()
     runtime_container = container or Container.build(runtime_settings)
+    configure_logging(runtime_settings.log_level)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):  # type: ignore[no-untyped-def]
@@ -31,6 +33,7 @@ def create_app(*, settings: Settings | None = None, container: Container | None 
         lifespan=lifespan,
     )
     app.state.container = runtime_container
+    app.add_middleware(RequestContextMiddleware)
     app.include_router(router)
 
     @app.exception_handler(AegisError)
@@ -45,4 +48,3 @@ def create_app(*, settings: Settings | None = None, container: Container | None 
 
 
 app = create_app()
-
