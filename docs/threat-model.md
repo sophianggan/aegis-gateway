@@ -21,6 +21,7 @@ designed to reveal database-level mutation.
 |---|---|---|
 | Caller claims a higher clearance | Clearance comes only from validated token claims | Identity unit tests |
 | Revoked credential is replayed | Revocation checked before any retrieval | End-to-end revoked-token test |
+| One principal exhausts gateway capacity | Identity-keyed token bucket returns bounded retry guidance | Unit and HTTP integration tests |
 | Restricted field reaches a model | Field-level mandatory policy builds a new safe context | Policy and query-path tests |
 | Record contains prompt injection | High-confidence instructions are quarantined per field | Retrieved-injection test |
 | Caller sends prompt injection | Ingress guard rejects before retrieval | Adversarial security gate |
@@ -30,6 +31,7 @@ designed to reveal database-level mutation.
 | Model endpoint is unavailable or malformed | Strict parsing and no unguarded fallback | Provider adapter tests |
 | A compromised pod scans the cluster | Default-deny network policy and explicit destinations | Manifest review |
 | Container privilege escalation | Non-root, read-only root, dropped capabilities, seccomp | Container and manifest review |
+| Build artifact is replaced after testing | Wheel, SBOM, image ID, revision, and SHA-256 evidence manifest | Supply-chain CI job |
 
 ## Abuse cases in CI
 
@@ -58,4 +60,3 @@ Aegis is designed to demonstrate:
 - An attacker controlling both the database and the audit signing key can forge a chain.
   Keep those controls under separate administrative identities and export chain heads.
 - This reference implementation is not itself a compliance certification.
-

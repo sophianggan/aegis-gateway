@@ -32,10 +32,14 @@ flowchart LR
 - **Fail-closed response inspection** for filtered values, credentials, tokens, private
   keys, and identifiers.
 - **Tamper-evident audit trails** using append-only PostgreSQL rows and HMAC hash chains.
+- **Signed audit evidence exports** that bind verified events and the chain head into a
+  portable integrity bundle.
 - **A clean developer surface** through FastAPI, generated OpenAPI docs, and an async,
-  typed Python SDK.
+  typed Python SDK with bounded concurrent ingestion.
 - **Reproducible operations** with an offline deterministic provider, Docker Compose,
   hardened Kubernetes manifests, structured payload-free logging, and operator tooling.
+- **Operational protection** through safe production configuration validation,
+  per-principal token buckets, and low-cardinality Prometheus metrics.
 - **Security as a build gate** with unit, integration, negative, and red-team tests that
   fail on both leakage and excessive refusal.
 
@@ -107,7 +111,8 @@ that were filtered plus structured credential patterns. Any finding blocks the c
 response. Audit events store counts and decisions, never prompts or record values.
 
 Read [the architecture](docs/architecture.md), [the threat model](docs/threat-model.md),
-and [the operations runbook](docs/runbook.md) for the full reasoning and residual risks.
+[the API/SDK guide](docs/api.md), and [the operations runbook](docs/runbook.md) for the full
+reasoning and residual risks.
 
 ## Quality gates
 
@@ -118,8 +123,9 @@ pytest -m redteam tests/redteam
 docker build -t aegis-gateway:local .
 ```
 
-The current suite contains 70 tests and enforces at least 85% branch-aware coverage. CI
-also performs dependency auditing and an immutable container build.
+The current suite contains 97 standard tests plus a live PostgreSQL integration test and
+enforces at least 85% branch-aware coverage. CI also performs dependency auditing, builds
+an immutable container, and publishes a checksummed wheel/SBOM evidence bundle.
 
 ## Repository map
 
@@ -129,8 +135,10 @@ src/aegis_sdk/         async typed client
 migrations/            append-only PostgreSQL schema and least-privilege roles
 tests/redteam/          injection, exfiltration, and over-refusal security gate
 deploy/kubernetes/     hardened workload, scaling, and network policy
+infra/terraform/       validated private multi-AZ cloud reference deployment
 docs/                  architecture, threat model, and operating procedures
 examples/              executable local demonstration
+scripts/               supply-chain evidence tooling
 ```
 
 ## Design choices

@@ -10,7 +10,8 @@ until it passes independent inspection.
 flowchart LR
     Client[Application / Python SDK] -->|signed bearer token| API[FastAPI gateway]
     API --> Identity[Identity and revocation]
-    Identity --> Retrieval[Record retrieval]
+    Identity --> Limit[Per-principal token bucket]
+    Limit --> Retrieval[Record retrieval]
     Retrieval --> Policy[Field policy engine]
     Policy -->|authorized fields only| Ingress[Injection quarantine]
     Ingress --> Envelope[Canonical JSON envelope]
@@ -26,14 +27,15 @@ flowchart LR
 1. Identity is derived only from a validated, signed token. Client-supplied body fields
    cannot change clearance, compartments, or roles.
 2. Revocation is checked before retrieval.
-3. Every field must satisfy clearance, compartment, and exportability policy before it
+3. Per-principal limits are evaluated from trusted identity, never a client-selected key.
+4. Every field must satisfy clearance, compartment, and exportability policy before it
    enters the model context.
-4. Retrieved text is inert data. Fields containing high-confidence control instructions
+5. Retrieved text is inert data. Fields containing high-confidence control instructions
    are quarantined before prompt assembly.
-5. Prompt assembly uses a canonical JSON envelope with a fixed system boundary.
-6. Model output is checked for protected values and structured credentials. A finding
+6. Prompt assembly uses a canonical JSON envelope with a fixed system boundary.
+7. Model output is checked for protected values and structured credentials. A finding
    blocks the entire response.
-7. Each hop records payload-free metadata in an append-only, HMAC-linked event chain.
+8. Each hop records payload-free metadata in an append-only, HMAC-linked event chain.
 
 ## Components
 
@@ -58,6 +60,10 @@ canonical event JSON, including that prior hash. PostgreSQL prevents updates and
 the signature chain additionally detects forged direct inserts, reordering, or mutation.
 The signing key must live in a managed secret store outside the database.
 
+Verified chains can be exported as signed bundles. The bundle signature covers the exact
+event list, request ID, generation time, count, and chain head, making evidence portable
+without weakening the database's append-only controls.
+
 ### Failure model
 
 Authorization, inspection, and upstream parsing fail closed. An unavailable model never
@@ -71,6 +77,11 @@ starts with three replicas, has a disruption budget, and scales horizontally on 
 Database connections are pooled per process. Model requests carry an idempotency key so a
 compatible internal provider can safely deduplicate retries at its boundary.
 
+The private cloud reference uses an internal TLS load balancer, private Fargate tasks,
+multi-AZ encrypted PostgreSQL, digest-pinned images, autoscaling, deployment rollback, and
+separate execution/task identities. It consumes existing private networking rather than
+silently creating internet-facing paths.
+
 ## Extension points
 
 - Replace symmetric development JWT validation with an OIDC/JWKS authenticator.
@@ -78,4 +89,3 @@ compatible internal provider can safely deduplicate retries at its boundary.
 - Send HMAC chain heads to immutable object storage or an external transparency service.
 - Add an approved embedding/retrieval adapter behind `RecordRepository`.
 - Introduce tenant keys and row-level security for multi-tenant operation.
-

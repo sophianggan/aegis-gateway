@@ -10,7 +10,9 @@ Track these signals without recording query or response bodies:
 - egress blocks by finding kind;
 - model failure/timeout rate;
 - database pool saturation;
-- audit-chain verification failures.
+- audit-chain verification failures;
+- rate-limit responses by route and identity class;
+- supply-chain audit results and evidence retention.
 
 A reasonable starting objective is 99.9% successful gateway availability per month,
 excluding requests intentionally denied by policy. Alert on any audit verification failure
@@ -24,9 +26,14 @@ and any sustained increase in egress blocks.
 4. Pin the image by digest in the deployment overlay.
 5. Verify readiness, then send a public-data canary query.
 6. Verify the canary request's audit chain with an auditor identity.
+7. Archive the workflow's SBOM and checksum manifest with the deployed image digest.
 
 Required secret values are `AEGIS_DATABASE_URL`, `AEGIS_JWT_SECRET`,
 `AEGIS_AUDIT_HMAC_KEY`, and, when applicable, `AEGIS_MODEL_API_KEY`.
+
+The `/metrics` endpoint contains route templates, status codes, counts, and durations only.
+Scrape it from a protected monitoring network. Alert on sustained `429` responses, any
+`409` audit-integrity response, egress blocks, or database-pool saturation.
 
 ## Key rotation
 
@@ -65,4 +72,3 @@ escrow for historical verification; never place key material in an audit event.
 Back up records and audit events with point-in-time recovery enabled. Encrypt backups with
 a key administered separately from the database. A recovery exercise is successful only
 when restored audit chains verify and a canary query passes all policy controls.
-
