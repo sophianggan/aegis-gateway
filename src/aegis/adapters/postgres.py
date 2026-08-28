@@ -18,6 +18,9 @@ class PostgresRecordRepository:
     def __init__(self, pool: asyncpg.Pool) -> None:
         self._pool = pool
 
+    async def healthcheck(self) -> bool:
+        return bool(await self._pool.fetchval("SELECT 1"))
+
     async def fetch(self, record_ids: Sequence[UUID], *, limit: int) -> list[Record]:
         if not record_ids:
             return []

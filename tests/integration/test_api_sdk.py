@@ -84,6 +84,27 @@ async def test_api_uses_stable_error_envelope() -> None:
     }
 
 
+async def test_readiness_probes_persistence_dependency() -> None:
+    app, container, _ = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        ready = await client.get("/v1/health/ready")
+
+        async def unavailable() -> bool:
+            return False
+
+        container.records.healthcheck = unavailable  # type: ignore[method-assign]
+        degraded = await client.get("/v1/health/ready")
+
+    assert ready.status_code == 200
+    assert ready.json() == {"status": "ready", "checks": {"persistence": "ok"}}
+    assert degraded.status_code == 503
+    assert degraded.json() == {
+        "status": "degraded",
+        "checks": {"persistence": "unavailable"},
+    }
+
+
 async def test_auditor_can_verify_completed_request_chain() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)

@@ -116,6 +116,10 @@ reasoning and residual risks.
 
 ## Quality gates
 
+Runtime probes distinguish process liveness from traffic readiness. The readiness
+endpoint performs a bounded persistence check and returns HTTP 503 with a payload-safe
+component status whenever the instance should leave service discovery.
+
 ```bash
 make lint
 make test

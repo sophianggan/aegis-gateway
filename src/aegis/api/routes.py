@@ -1,7 +1,9 @@
+import asyncio
 from typing import Annotated
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import JSONResponse
 
 from aegis.api.dependencies import get_container, get_principal
 from aegis.container import Container
@@ -40,10 +42,21 @@ async def liveness() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.get("/health/ready", tags=["operations"])
-async def readiness(request: Request) -> dict[str, str]:
-    get_container(request)
-    return {"status": "ready"}
+@router.get("/health/ready", tags=["operations"], response_model=None)
+async def readiness(request: Request) -> dict[str, object] | JSONResponse:
+    container = get_container(request)
+    try:
+        async with asyncio.timeout(min(container.settings.request_timeout_seconds, 2.0)):
+            persistence_ready = await container.records.healthcheck()
+    except (TimeoutError, OSError, RuntimeError):
+        persistence_ready = False
+    body: dict[str, object] = {
+        "status": "ready" if persistence_ready else "degraded",
+        "checks": {"persistence": "ok" if persistence_ready else "unavailable"},
+    }
+    if not persistence_ready:
+        return JSONResponse(status_code=503, content=body)
+    return body
 
 
 @router.post("/query", response_model=QueryResponse, tags=["gateway"])

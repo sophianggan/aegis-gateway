@@ -11,6 +11,9 @@ class InMemoryRecordRepository:
     def __init__(self, records: Sequence[Record] = ()) -> None:
         self._records = {record.id: record for record in records}
 
+    async def healthcheck(self) -> bool:
+        return True
+
     async def fetch(self, record_ids: Sequence[UUID], *, limit: int) -> list[Record]:
         return [self._records[item] for item in record_ids[:limit] if item in self._records]
 
