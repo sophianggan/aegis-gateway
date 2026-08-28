@@ -106,9 +106,13 @@ async def test_async_sdk_wraps_api_and_typed_response() -> None:
             record_ids=[DEMO_RECORDS[0].id],
             purpose="operations review",
         )
+        bundle = await client.export_audit(result.request_id)
 
     assert result.answer.startswith("Question: Summarize maintenance")
     assert result.citations[0].record_id == DEMO_RECORDS[0].id
+    assert bundle.request_id == result.request_id
+    assert bundle.event_count == 6
+    assert len(bundle.bundle_signature) == 64
 
 
 async def test_sdk_surfaces_gateway_error_code() -> None:

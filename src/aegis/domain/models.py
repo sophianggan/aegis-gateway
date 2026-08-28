@@ -148,3 +148,14 @@ class AuditEvent(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
     previous_hash: str = ""
     event_hash: str = ""
+
+
+class AuditBundle(BaseModel):
+    version: str = "aegis.audit.v1"
+    request_id: UUID
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    event_count: int = Field(ge=1)
+    chain_head: str
+    events: list[AuditEvent]
+    signature_algorithm: str = "HMAC-SHA256"
+    bundle_signature: str = ""

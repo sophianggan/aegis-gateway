@@ -7,7 +7,8 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
-from aegis.domain.models import AuditAction, AuditEvent, Decision
+from aegis.domain.models import AuditAction, AuditBundle, AuditEvent, Decision
+from aegis.errors import AuditIntegrityError
 from aegis.ports import AuditRepository
 
 
@@ -51,9 +52,13 @@ class AuditTrail:
         return signed
 
     async def verify(self, request_id: UUID) -> bool:
+        events = [event async for event in self._repository.stream(request_id)]
+        return self._verify_events(events)
+
+    def _verify_events(self, events: list[AuditEvent]) -> bool:
         expected_previous = ""
         expected_sequence = 0
-        async for event in self._repository.stream(request_id):
+        for event in events:
             if event.sequence != expected_sequence or event.previous_hash != expected_previous:
                 return False
             unsigned = event.model_copy(update={"event_hash": ""})
@@ -62,6 +67,37 @@ class AuditTrail:
             expected_previous = event.event_hash
             expected_sequence += 1
         return expected_sequence > 0
+
+    def _bundle_signature(self, bundle: AuditBundle) -> str:
+        payload = bundle.model_dump(mode="json", exclude={"bundle_signature"})
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hmac.new(self._key, canonical, hashlib.sha256).hexdigest()
+
+    async def export(self, request_id: UUID) -> AuditBundle:
+        events = [event async for event in self._repository.stream(request_id)]
+        if not self._verify_events(events):
+            raise AuditIntegrityError("audit chain cannot be exported because verification failed")
+        bundle = AuditBundle(
+            request_id=request_id,
+            event_count=len(events),
+            chain_head=events[-1].event_hash,
+            events=events,
+        )
+        return bundle.model_copy(update={"bundle_signature": self._bundle_signature(bundle)})
+
+    def verify_bundle(self, bundle: AuditBundle) -> bool:
+        if bundle.event_count != len(bundle.events) or not bundle.events:
+            return False
+        if bundle.request_id != bundle.events[0].request_id:
+            return False
+        if any(event.request_id != bundle.request_id for event in bundle.events):
+            return False
+        if bundle.chain_head != bundle.events[-1].event_hash:
+            return False
+        if not self._verify_events(bundle.events):
+            return False
+        unsigned = bundle.model_copy(update={"bundle_signature": ""})
+        return hmac.compare_digest(bundle.bundle_signature, self._bundle_signature(unsigned))
 
     async def stream(self, request_id: UUID) -> AsyncIterator[AuditEvent]:
         async for event in self._repository.stream(request_id):

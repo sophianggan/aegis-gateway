@@ -1,7 +1,10 @@
 from uuid import uuid4
 
+import pytest
+
 from aegis.adapters.memory import InMemoryAuditRepository
 from aegis.domain.models import AuditAction, Decision
+from aegis.errors import AuditIntegrityError
 from aegis.services.audit import AuditTrail
 
 
@@ -49,3 +52,54 @@ async def test_detects_event_tampering() -> None:
 async def test_empty_chain_is_not_valid() -> None:
     trail = AuditTrail(InMemoryAuditRepository(), "audit-test-key-that-is-long")
     assert not await trail.verify(uuid4())
+
+
+async def test_exports_signed_self_consistent_bundle() -> None:
+    repository = InMemoryAuditRepository()
+    trail = AuditTrail(repository, "audit-test-key-that-is-long")
+    request_id = uuid4()
+    await trail.record(
+        request_id=request_id,
+        actor="auditor",
+        action=AuditAction.REQUEST_COMPLETE,
+        decision=Decision.ALLOW,
+    )
+
+    bundle = await trail.export(request_id)
+
+    assert bundle.event_count == 1
+    assert bundle.chain_head == bundle.events[0].event_hash
+    assert len(bundle.bundle_signature) == 64
+    assert trail.verify_bundle(bundle)
+
+
+async def test_bundle_verification_detects_metadata_tampering() -> None:
+    repository = InMemoryAuditRepository()
+    trail = AuditTrail(repository, "audit-test-key-that-is-long")
+    request_id = uuid4()
+    await trail.record(
+        request_id=request_id,
+        actor="auditor",
+        action=AuditAction.REQUEST_COMPLETE,
+        decision=Decision.ALLOW,
+    )
+    bundle = await trail.export(request_id)
+
+    tampered = bundle.model_copy(update={"chain_head": "0" * 64})
+    assert not trail.verify_bundle(tampered)
+
+
+async def test_refuses_to_export_tampered_chain() -> None:
+    repository = InMemoryAuditRepository()
+    trail = AuditTrail(repository, "audit-test-key-that-is-long")
+    request_id = uuid4()
+    event = await trail.record(
+        request_id=request_id,
+        actor="auditor",
+        action=AuditAction.REQUEST_COMPLETE,
+        decision=Decision.ALLOW,
+    )
+    repository._events[request_id][0] = event.model_copy(update={"actor": "changed"})
+
+    with pytest.raises(AuditIntegrityError):
+        await trail.export(request_id)

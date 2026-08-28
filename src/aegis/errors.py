@@ -36,3 +36,8 @@ class UpstreamModelError(AegisError):
 class RateLimitError(AegisError):
     code = "rate_limit_exceeded"
     status_code = 429
+
+
+class AuditIntegrityError(AegisError):
+    code = "audit_integrity_failed"
+    status_code = 409

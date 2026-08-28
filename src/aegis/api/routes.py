@@ -7,6 +7,7 @@ from aegis.api.dependencies import get_container, get_principal
 from aegis.container import Container
 from aegis.domain.models import (
     AuditAction,
+    AuditBundle,
     AuditEvent,
     Decision,
     Principal,
@@ -72,6 +73,16 @@ async def verify_audit_chain(
 ) -> dict[str, bool]:
     await _enforce_operational_access(principal, container, required_role="auditor")
     return {"valid": await container.audit.verify(request_id)}
+
+
+@router.get("/audit/{request_id}/export", response_model=AuditBundle, tags=["audit"])
+async def export_audit_bundle(
+    request_id: UUID,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> AuditBundle:
+    await _enforce_operational_access(principal, container, required_role="auditor")
+    return await container.audit.export(request_id)
 
 
 @router.post("/records", response_model=RecordReceipt, status_code=201, tags=["records"])

@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 
 import httpx
 
-from aegis_sdk.models import QueryResult
+from aegis_sdk.models import AuditBundle, QueryResult
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 
@@ -71,6 +71,10 @@ class AegisClient:
     async def verify_audit(self, request_id: UUID | str) -> bool:
         response = await self._request("GET", f"/v1/audit/{request_id}/verify")
         return bool(response["valid"])
+
+    async def export_audit(self, request_id: UUID | str) -> AuditBundle:
+        response = await self._request("GET", f"/v1/audit/{request_id}/export")
+        return AuditBundle.model_validate(response)
 
     async def _resolve_token(self) -> str:
         if isinstance(self._token, str):
