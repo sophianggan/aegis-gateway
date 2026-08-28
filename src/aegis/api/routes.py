@@ -1,13 +1,37 @@
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Request
 
 from aegis.api.dependencies import get_container, get_principal
 from aegis.container import Container
-from aegis.domain.models import AuditEvent, Principal, QueryRequest, QueryResponse
+from aegis.domain.models import (
+    AuditAction,
+    AuditEvent,
+    Decision,
+    Principal,
+    QueryRequest,
+    QueryResponse,
+    Record,
+    RecordCreate,
+    RecordReceipt,
+)
+from aegis.errors import AuthenticationError, AuthorizationError
 
 router = APIRouter(prefix="/v1")
+
+
+async def _enforce_operational_access(
+    principal: Principal,
+    container: Container,
+    *,
+    required_role: str,
+) -> None:
+    if principal.token_id and await container.revocations.is_revoked(principal.token_id):
+        raise AuthenticationError("token has been revoked")
+    await container.rate_limiter.enforce(principal.subject)
+    if required_role not in principal.roles:
+        raise AuthorizationError(f"{required_role} role is required")
 
 
 @router.get("/health/live", tags=["operations"])
@@ -36,10 +60,7 @@ async def audit_events(
     principal: Annotated[Principal, Depends(get_principal)],
     container: Annotated[Container, Depends(get_container)],
 ) -> list[AuditEvent]:
-    if "auditor" not in principal.roles:
-        from aegis.errors import AuthorizationError
-
-        raise AuthorizationError("auditor role is required")
+    await _enforce_operational_access(principal, container, required_role="auditor")
     return [event async for event in container.audit.stream(request_id)]
 
 
@@ -49,8 +70,36 @@ async def verify_audit_chain(
     principal: Annotated[Principal, Depends(get_principal)],
     container: Annotated[Container, Depends(get_container)],
 ) -> dict[str, bool]:
-    if "auditor" not in principal.roles:
-        from aegis.errors import AuthorizationError
-
-        raise AuthorizationError("auditor role is required")
+    await _enforce_operational_access(principal, container, required_role="auditor")
     return {"valid": await container.audit.verify(request_id)}
+
+
+@router.post("/records", response_model=RecordReceipt, status_code=201, tags=["records"])
+async def create_record(
+    payload: RecordCreate,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> RecordReceipt:
+    await _enforce_operational_access(principal, container, required_role="data-admin")
+    record = Record(id=payload.id, source=payload.source, fields=payload.fields)
+    await container.records.put(record)
+    request_id = uuid4()
+    highest = max(field.classification for field in record.fields.values())
+    await container.audit.record(
+        request_id=request_id,
+        actor=principal.subject,
+        action=AuditAction.RECORD_UPSERT,
+        decision=Decision.ALLOW,
+        resource_ids=[str(record.id)],
+        details={
+            "field_count": len(record.fields),
+            "highest_classification": highest.name,
+            "source": record.source,
+        },
+    )
+    return RecordReceipt(
+        request_id=request_id,
+        record_id=record.id,
+        field_count=len(record.fields),
+        highest_classification=highest,
+    )

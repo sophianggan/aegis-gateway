@@ -16,7 +16,13 @@ from aegis.adapters.postgres import (
     PostgresRevocationStore,
 )
 from aegis.config import Settings
-from aegis.ports import AuditRepository, ModelProvider, RecordRepository, RevocationStore
+from aegis.ports import (
+    AuditRepository,
+    ModelProvider,
+    RateLimiter,
+    RecordRepository,
+    RevocationStore,
+)
 from aegis.security.identity import TokenAuthenticator
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
@@ -36,6 +42,7 @@ class Container:
     model: ModelProvider
     audit: AuditTrail
     queries: QueryService
+    rate_limiter: RateLimiter
     pool: asyncpg.Pool | None = None
 
     @classmethod
@@ -45,6 +52,7 @@ class Container:
         revocations = InMemoryRevocationStore()
         model = cls._build_model(settings)
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
+        rate_limiter = cls._build_rate_limiter(settings)
         queries = QueryService(
             records=records,
             model=model,
@@ -53,7 +61,7 @@ class Container:
             input_guard=InputGuard(),
             output_guard=OutputGuard(),
             audit=audit,
-            rate_limiter=cls._build_rate_limiter(settings),
+            rate_limiter=rate_limiter,
             max_records=settings.max_context_records,
         )
         return cls(
@@ -65,6 +73,7 @@ class Container:
             model=model,
             audit=audit,
             queries=queries,
+            rate_limiter=rate_limiter,
         )
 
     @classmethod
@@ -80,6 +89,7 @@ class Container:
         revocations = PostgresRevocationStore(pool)
         model = cls._build_model(settings)
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
+        rate_limiter = cls._build_rate_limiter(settings)
         return cls(
             settings=settings,
             authenticator=TokenAuthenticator(settings),
@@ -96,9 +106,10 @@ class Container:
                 input_guard=InputGuard(),
                 output_guard=OutputGuard(),
                 audit=audit,
-                rate_limiter=cls._build_rate_limiter(settings),
+                rate_limiter=rate_limiter,
                 max_records=settings.max_context_records,
             ),
+            rate_limiter=rate_limiter,
             pool=pool,
         )
 

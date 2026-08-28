@@ -152,3 +152,58 @@ async def test_rate_limit_returns_retry_after_header() -> None:
     assert limited.status_code == 429
     assert limited.headers["retry-after"] == "60"
     assert limited.json()["error"]["code"] == "rate_limit_exceeded"
+
+
+async def test_data_admin_can_ingest_classified_record_then_query_safe_fields() -> None:
+    app, container, _ = await configured_app()
+    admin_token = container.authenticator.issue_development_token(
+        subject="data-steward",
+        clearance=Classification.INTERNAL,
+        roles={"data-admin"},
+    )
+    record_id = "33333333-3333-4333-8333-333333333333"
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await client.post(
+            "/v1/records",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "id": record_id,
+                "source": "controlled-import",
+                "fields": {
+                    "summary": {"value": "inspection complete", "classification": "INTERNAL"},
+                    "local_key": {
+                        "value": "LOCAL-KEY-9912",
+                        "classification": "RESTRICTED",
+                        "exportable": False,
+                    },
+                },
+            },
+        )
+        queried = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={"query": "What is the status?", "record_ids": [record_id]},
+        )
+
+    assert created.status_code == 201
+    assert created.json()["highest_classification"] == 30
+    assert queried.status_code == 200
+    assert "inspection complete" in queried.json()["answer"]
+    assert "LOCAL-KEY-9912" not in queried.json()["answer"]
+
+
+async def test_record_ingestion_requires_data_admin_role() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/records",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "source": "controlled-import",
+                "fields": {"summary": {"value": "safe", "classification": "PUBLIC"}},
+            },
+        )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "authorization_denied"

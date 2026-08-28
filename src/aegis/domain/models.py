@@ -39,6 +39,7 @@ class AuditAction(StrEnum):
     OUTPUT_SCAN = "output.scan"
     REQUEST_COMPLETE = "request.complete"
     REQUEST_DENY = "request.deny"
+    RECORD_UPSERT = "record.upsert"
 
 
 class Principal(BaseModel):
@@ -66,6 +67,11 @@ class DataField(BaseModel):
     compartments: frozenset[str] = Field(default_factory=frozenset)
     exportable: bool = True
 
+    @field_validator("classification", mode="before")
+    @classmethod
+    def parse_classification(cls, value: Any) -> Classification:
+        return Classification.parse(value)
+
     @field_validator("compartments", mode="before")
     @classmethod
     def normalize_compartments(cls, value: Any) -> frozenset[str]:
@@ -79,6 +85,19 @@ class Record(BaseModel):
     source: str = Field(min_length=1, max_length=100)
     fields: dict[str, DataField]
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class RecordCreate(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    source: str = Field(min_length=1, max_length=100)
+    fields: dict[str, DataField] = Field(min_length=1, max_length=200)
+
+
+class RecordReceipt(BaseModel):
+    request_id: UUID
+    record_id: UUID
+    field_count: int
+    highest_classification: Classification
 
 
 class PolicyDecision(BaseModel):
