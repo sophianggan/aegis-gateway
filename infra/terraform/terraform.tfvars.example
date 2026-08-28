@@ -1,0 +1,16 @@
+aws_region          = "us-east-1"
+name                = "aegis"
+vpc_id              = "vpc-00000000000000000"
+private_subnet_ids  = ["subnet-00000000000000001", "subnet-00000000000000002"]
+allowed_cidr_blocks = ["10.20.0.0/16"]
+certificate_arn     = "arn:aws:acm:us-east-1:123456789012:certificate/example"
+image_uri           = "123456789012.dkr.ecr.us-east-1.amazonaws.com/aegis@sha256:replace"
+runtime_secret_arn  = "arn:aws:secretsmanager:us-east-1:123456789012:secret:aegis-runtime"
+model_base_url      = "https://model.internal.example/v1"
+model_name          = "approved-model"
+
+tags = {
+  Environment = "production"
+  Owner       = "platform-security"
+}
+
