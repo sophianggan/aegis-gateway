@@ -1,4 +1,4 @@
-.PHONY: install lint test run migrate demo
+.PHONY: install lint test test-postgres run migrate demo
 
 install:
 	python -m pip install -e '.[dev]'
@@ -10,6 +10,9 @@ lint:
 test:
 	pytest --cov --cov-report=term-missing
 
+test-postgres:
+	pytest -m postgres tests/postgres
+
 run:
 	uvicorn aegis.main:create_app --factory --reload
 
@@ -18,4 +21,3 @@ migrate:
 
 demo:
 	python examples/quickstart.py
-

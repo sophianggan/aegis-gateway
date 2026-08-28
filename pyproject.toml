@@ -40,7 +40,10 @@ packages = ["src/aegis", "src/aegis_sdk"]
 addopts = "-q --strict-markers --strict-config"
 asyncio_mode = "auto"
 testpaths = ["tests"]
-markers = ["redteam: adversarial security regression suite"]
+markers = [
+  "postgres: requires an isolated PostgreSQL service",
+  "redteam: adversarial security regression suite",
+]
 
 [tool.coverage.run]
 branch = true

@@ -53,6 +53,33 @@ jobs:
       - name: Fail on leakage or excessive refusal
         run: pytest -m redteam tests/redteam
 
+  postgres-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: aegis_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: integration-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d aegis_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    env:
+      AEGIS_TEST_DATABASE_URL: postgresql://postgres:integration-only@localhost:5432/aegis_test
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -e '.[dev]'
+      - run: pytest -m postgres tests/postgres
+
   supply-chain:
     runs-on: ubuntu-latest
     steps:
