@@ -1,7 +1,7 @@
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,6 +32,32 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     max_query_characters: int = Field(default=8_000, ge=1, le=100_000)
     max_context_records: int = Field(default=20, ge=1, le=100)
+
+    @model_validator(mode="after")
+    def validate_runtime_safety(self) -> Self:
+        if self.database_pool_min_size > self.database_pool_max_size:
+            raise ValueError("database pool minimum cannot exceed maximum")
+        if self.environment != "production":
+            return self
+
+        violations: list[str] = []
+        jwt_value = self.jwt_secret.get_secret_value()
+        audit_value = self.audit_hmac_key.get_secret_value()
+        if self.persistence != "postgres":
+            violations.append("production persistence must use postgres")
+        if self.model_provider != "openai-compatible":
+            violations.append("production model provider must use an isolated endpoint")
+        if len(jwt_value) < 32 or "development-only" in jwt_value:
+            violations.append("production JWT secret must be independently provisioned")
+        if len(audit_value) < 32 or "development-only" in audit_value:
+            violations.append("production audit key must be independently provisioned")
+        if jwt_value == audit_value:
+            violations.append("identity and audit keys must be different")
+        if "aegis:aegis@localhost" in self.database_url:
+            violations.append("production database URL must be independently provisioned")
+        if violations:
+            raise ValueError("; ".join(violations))
+        return self
 
 
 @lru_cache
