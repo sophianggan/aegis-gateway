@@ -60,3 +60,9 @@ async def test_sdk_rejects_malformed_gateway_responses(
     ) as client:
         with pytest.raises(AegisClientError, match=expected):
             await client.query("status")
+
+
+async def test_bulk_ingestion_validates_concurrency_before_request() -> None:
+    async with AegisClient("https://gateway.internal", "token") as client:
+        with pytest.raises(ValueError, match="between 1 and 32"):
+            await client.create_records([], concurrency=0)

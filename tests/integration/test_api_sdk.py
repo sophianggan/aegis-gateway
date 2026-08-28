@@ -11,7 +11,13 @@ from aegis.container import Container
 from aegis.demo_data import DEMO_RECORDS
 from aegis.domain.models import Classification
 from aegis.main import create_app
-from aegis_sdk import AegisClient, AegisClientError
+from aegis_sdk import (
+    AegisClient,
+    AegisClientError,
+    ClassifiedValue,
+    RecordInput,
+)
+from aegis_sdk import Classification as SdkClassification
 
 
 def runtime_settings() -> Settings:
@@ -227,3 +233,38 @@ async def test_metrics_use_route_templates_and_never_capture_payloads() -> None:
     assert response.status_code == 200
     assert 'route="/v1/query"' in response.text
     assert "unique-private-query-marker" not in response.text
+
+
+async def test_sdk_ingests_multiple_typed_records_in_order() -> None:
+    app, container, _ = await configured_app()
+    token = container.authenticator.issue_development_token(
+        subject="sdk-steward",
+        clearance=Classification.CONFIDENTIAL,
+        roles={"data-admin"},
+    )
+    records = [
+        RecordInput(
+            source=f"sdk-import-{index}",
+            fields={
+                "summary": ClassifiedValue(
+                    value=f"record-{index}",
+                    classification=SdkClassification.INTERNAL,
+                ),
+                "control": ClassifiedValue(
+                    value=f"CONTROL-{index}",
+                    classification=SdkClassification.RESTRICTED,
+                    exportable=False,
+                ),
+            },
+        )
+        for index in range(3)
+    ]
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        receipts = await client.create_records(records, concurrency=2)
+
+    assert [receipt.record_id for receipt in receipts] == [record.id for record in records]
+    assert all(receipt.field_count == 2 for receipt in receipts)
+    assert all(
+        receipt.highest_classification == SdkClassification.RESTRICTED for receipt in receipts
+    )

@@ -1,10 +1,38 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import IntEnum
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+
+class Classification(IntEnum):
+    PUBLIC = 0
+    INTERNAL = 10
+    CONFIDENTIAL = 20
+    RESTRICTED = 30
+
+
+class ClassifiedValue(BaseModel):
+    value: Any
+    classification: Classification = Classification.INTERNAL
+    compartments: set[str] = Field(default_factory=set)
+    exportable: bool = True
+
+
+class RecordInput(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    source: str = Field(min_length=1, max_length=100)
+    fields: dict[str, ClassifiedValue] = Field(min_length=1, max_length=200)
+
+
+class RecordReceipt(BaseModel):
+    request_id: UUID
+    record_id: UUID
+    field_count: int
+    highest_classification: Classification
 
 
 class Citation(BaseModel):

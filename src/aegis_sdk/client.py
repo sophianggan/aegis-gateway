@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable, Sequence
 from typing import Any
 from uuid import UUID, uuid4
 
 import httpx
 
-from aegis_sdk.models import AuditBundle, QueryResult
+from aegis_sdk.models import AuditBundle, QueryResult, RecordInput, RecordReceipt
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 
@@ -75,6 +76,30 @@ class AegisClient:
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
         response = await self._request("GET", f"/v1/audit/{request_id}/export")
         return AuditBundle.model_validate(response)
+
+    async def create_record(self, record: RecordInput) -> RecordReceipt:
+        response = await self._request(
+            "POST",
+            "/v1/records",
+            json=record.model_dump(mode="json"),
+        )
+        return RecordReceipt.model_validate(response)
+
+    async def create_records(
+        self,
+        records: Sequence[RecordInput],
+        *,
+        concurrency: int = 4,
+    ) -> list[RecordReceipt]:
+        if concurrency < 1 or concurrency > 32:
+            raise ValueError("concurrency must be between 1 and 32")
+        semaphore = asyncio.Semaphore(concurrency)
+
+        async def create(record: RecordInput) -> RecordReceipt:
+            async with semaphore:
+                return await self.create_record(record)
+
+        return list(await asyncio.gather(*(create(record) for record in records)))
 
     async def _resolve_token(self) -> str:
         if isinstance(self._token, str):
