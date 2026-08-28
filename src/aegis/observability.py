@@ -37,6 +37,15 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception:
+            duration = time.perf_counter() - started
+            registry = getattr(request.app.state, "metrics", None)
+            if registry is not None:
+                registry.observe_http(
+                    method=request.method,
+                    route=self._route_template(request),
+                    status=500,
+                    duration=duration,
+                )
             logger.exception(
                 "request_failed",
                 method=request.method,
@@ -50,6 +59,15 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Cache-Control"] = "no-store"
         response.headers["Referrer-Policy"] = "no-referrer"
+        duration = time.perf_counter() - started
+        registry = getattr(request.app.state, "metrics", None)
+        if registry is not None:
+            registry.observe_http(
+                method=request.method,
+                route=self._route_template(request),
+                status=response.status_code,
+                duration=duration,
+            )
         logger.info(
             "request_complete",
             method=request.method,
@@ -58,3 +76,9 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
             duration_ms=round((time.perf_counter() - started) * 1000, 2),
         )
         return response
+
+    @staticmethod
+    def _route_template(request: Request) -> str:
+        route = request.scope.get("route")
+        path = getattr(route, "path", None)
+        return str(path) if path else "unmatched"

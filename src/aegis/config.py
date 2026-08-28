@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     rate_limit_requests_per_minute: int = Field(default=60, ge=1, le=100_000)
     rate_limit_burst: int = Field(default=10, ge=1, le=10_000)
     rate_limit_max_identities: int = Field(default=10_000, ge=100, le=1_000_000)
+    metrics_enabled: bool = True
 
     @model_validator(mode="after")
     def validate_runtime_safety(self) -> Self:

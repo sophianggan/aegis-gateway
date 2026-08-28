@@ -211,3 +211,19 @@ async def test_record_ingestion_requires_data_admin_role() -> None:
         )
     assert response.status_code == 403
     assert response.json()["error"]["code"] == "authorization_denied"
+
+
+async def test_metrics_use_route_templates_and_never_capture_payloads() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "unique-private-query-marker", "record_ids": []},
+        )
+        response = await client.get("/metrics")
+
+    assert response.status_code == 200
+    assert 'route="/v1/query"' in response.text
+    assert "unique-private-query-marker" not in response.text
