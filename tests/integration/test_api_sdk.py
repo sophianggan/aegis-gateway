@@ -122,3 +122,33 @@ async def test_sdk_surfaces_gateway_error_code() -> None:
         assert exc.status_code == 401
     else:
         raise AssertionError("SDK should surface authentication failures")
+
+
+async def test_rate_limit_returns_retry_after_header() -> None:
+    settings = Settings(
+        environment="test",
+        persistence="memory",
+        jwt_secret=SecretStr("rate-test-jwt-secret-that-is-long-enough"),
+        audit_hmac_key=SecretStr("rate-test-audit-secret-that-is-long"),
+        rate_limit_requests_per_minute=1,
+        rate_limit_burst=1,
+    )
+    container = Container.build(settings)
+    token = container.authenticator.issue_development_token(
+        subject="limited-user", clearance=Classification.INTERNAL
+    )
+    app = create_app(settings=settings, container=container)
+    transport = httpx.ASGITransport(app=app)
+    payload = {"query": "status", "record_ids": []}
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        first = await client.post(
+            "/v1/query", headers={"Authorization": f"Bearer {token}"}, json=payload
+        )
+        limited = await client.post(
+            "/v1/query", headers={"Authorization": f"Bearer {token}"}, json=payload
+        )
+
+    assert first.status_code == 200
+    assert limited.status_code == 429
+    assert limited.headers["retry-after"] == "60"
+    assert limited.json()["error"]["code"] == "rate_limit_exceeded"

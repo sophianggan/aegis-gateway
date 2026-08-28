@@ -27,3 +27,7 @@ class ModelProvider(Protocol):
 
 class RevocationStore(Protocol):
     async def is_revoked(self, token_id: str) -> bool: ...
+
+
+class RateLimiter(Protocol):
+    async def enforce(self, identity: str) -> None: ...

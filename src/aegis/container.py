@@ -23,6 +23,7 @@ from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
 from aegis.services.policy import PolicyEngine
 from aegis.services.query import QueryService
+from aegis.services.rate_limit import InMemoryTokenBucket
 
 
 @dataclass
@@ -52,6 +53,7 @@ class Container:
             input_guard=InputGuard(),
             output_guard=OutputGuard(),
             audit=audit,
+            rate_limiter=cls._build_rate_limiter(settings),
             max_records=settings.max_context_records,
         )
         return cls(
@@ -94,6 +96,7 @@ class Container:
                 input_guard=InputGuard(),
                 output_guard=OutputGuard(),
                 audit=audit,
+                rate_limiter=cls._build_rate_limiter(settings),
                 max_records=settings.max_context_records,
             ),
             pool=pool,
@@ -109,6 +112,14 @@ class Container:
                 timeout_seconds=settings.request_timeout_seconds,
             )
         return DeterministicModelProvider()
+
+    @staticmethod
+    def _build_rate_limiter(settings: Settings) -> InMemoryTokenBucket:
+        return InMemoryTokenBucket(
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            burst=settings.rate_limit_burst,
+            max_identities=settings.rate_limit_max_identities,
+        )
 
     async def close(self) -> None:
         close_model = getattr(self.model, "close", None)

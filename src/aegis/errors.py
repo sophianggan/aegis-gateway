@@ -31,3 +31,8 @@ class PolicyViolationError(AegisError):
 class UpstreamModelError(AegisError):
     code = "upstream_model_error"
     status_code = 502
+
+
+class RateLimitError(AegisError):
+    code = "rate_limit_exceeded"
+    status_code = 429

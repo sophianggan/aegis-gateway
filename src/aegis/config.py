@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     max_query_characters: int = Field(default=8_000, ge=1, le=100_000)
     max_context_records: int = Field(default=20, ge=1, le=100)
+    rate_limit_requests_per_minute: int = Field(default=60, ge=1, le=100_000)
+    rate_limit_burst: int = Field(default=10, ge=1, le=10_000)
+    rate_limit_max_identities: int = Field(default=10_000, ge=100, le=1_000_000)
 
     @model_validator(mode="after")
     def validate_runtime_safety(self) -> Self:
