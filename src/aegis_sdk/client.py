@@ -7,7 +7,14 @@ from uuid import UUID, uuid4
 
 import httpx
 
-from aegis_sdk.models import AuditBundle, PolicyPreview, QueryResult, RecordInput, RecordReceipt
+from aegis_sdk.models import (
+    AuditBundle,
+    AuditPage,
+    PolicyPreview,
+    QueryResult,
+    RecordInput,
+    RecordReceipt,
+)
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 
@@ -84,6 +91,19 @@ class AegisClient:
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
         response = await self._request("GET", f"/v1/audit/{request_id}/export")
         return AuditBundle.model_validate(response)
+
+    async def list_audit_events(
+        self, request_id: UUID | str, *, after_sequence: int = -1, limit: int = 50
+    ) -> AuditPage:
+        if after_sequence < -1:
+            raise ValueError("after_sequence must be at least -1")
+        if limit < 1 or limit > 200:
+            raise ValueError("limit must be between 1 and 200")
+        response = await self._request(
+            "GET",
+            f"/v1/audit/{request_id}/events?after_sequence={after_sequence}&limit={limit}",
+        )
+        return AuditPage.model_validate(response)
 
     async def create_record(self, record: RecordInput) -> RecordReceipt:
         response = await self._request(

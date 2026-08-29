@@ -7,7 +7,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
-from aegis.domain.models import AuditAction, AuditBundle, AuditEvent, Decision
+from aegis.domain.models import AuditAction, AuditBundle, AuditEvent, AuditPage, Decision
 from aegis.errors import AuditIntegrityError
 from aegis.ports import AuditRepository
 
@@ -102,3 +102,17 @@ class AuditTrail:
     async def stream(self, request_id: UUID) -> AsyncIterator[AuditEvent]:
         async for event in self._repository.stream(request_id):
             yield event
+
+    async def page(
+        self, request_id: UUID, *, after_sequence: int = -1, limit: int = 50
+    ) -> AuditPage:
+        events = await self._repository.page(
+            request_id, after_sequence=after_sequence, limit=limit + 1
+        )
+        has_more = len(events) > limit
+        selected = events[:limit]
+        return AuditPage(
+            events=selected,
+            next_sequence=selected[-1].sequence if has_more and selected else None,
+            has_more=has_more,
+        )

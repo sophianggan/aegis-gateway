@@ -41,6 +41,11 @@ class InMemoryAuditRepository:
         for event in self._events.get(request_id, []):
             yield event
 
+    async def page(self, request_id: UUID, *, after_sequence: int, limit: int) -> list[AuditEvent]:
+        return [
+            event for event in self._events.get(request_id, []) if event.sequence > after_sequence
+        ][:limit]
+
 
 class InMemoryRevocationStore:
     def __init__(self, revoked: set[str] | None = None) -> None:

@@ -3,6 +3,7 @@
 from aegis_sdk.client import AegisClient, AegisClientError
 from aegis_sdk.models import (
     AuditBundle,
+    AuditPage,
     Citation,
     Classification,
     ClassifiedValue,
@@ -16,6 +17,7 @@ __all__ = [
     "AegisClient",
     "AegisClientError",
     "AuditBundle",
+    "AuditPage",
     "Citation",
     "Classification",
     "ClassifiedValue",

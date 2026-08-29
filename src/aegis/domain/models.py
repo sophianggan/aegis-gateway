@@ -179,3 +179,9 @@ class AuditBundle(BaseModel):
     events: list[AuditEvent]
     signature_algorithm: str = "HMAC-SHA256"
     bundle_signature: str = ""
+
+
+class AuditPage(BaseModel):
+    events: list[AuditEvent]
+    next_sequence: int | None = None
+    has_more: bool = False

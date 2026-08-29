@@ -87,3 +87,9 @@ class AuditBundle(BaseModel):
     events: list[AuditEvent]
     signature_algorithm: str
     bundle_signature: str
+
+
+class AuditPage(BaseModel):
+    events: list[AuditEvent]
+    next_sequence: int | None
+    has_more: bool

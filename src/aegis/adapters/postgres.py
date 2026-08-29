@@ -108,6 +108,20 @@ class PostgresAuditRepository:
         for row in rows:
             yield self._to_event(row)
 
+    async def page(self, request_id: UUID, *, after_sequence: int, limit: int) -> list[AuditEvent]:
+        rows = await self._pool.fetch(
+            """
+            SELECT * FROM audit_events
+            WHERE request_id = $1 AND sequence > $2
+            ORDER BY sequence
+            LIMIT $3
+            """,
+            request_id,
+            after_sequence,
+            limit,
+        )
+        return [self._to_event(row) for row in rows]
+
     @staticmethod
     def _to_event(row: asyncpg.Record) -> AuditEvent:
         return AuditEvent(

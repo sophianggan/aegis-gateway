@@ -22,6 +22,10 @@ class AuditRepository(Protocol):
 
     def stream(self, request_id: UUID) -> AsyncIterator[AuditEvent]: ...
 
+    async def page(
+        self, request_id: UUID, *, after_sequence: int, limit: int
+    ) -> list[AuditEvent]: ...
+
 
 class ModelProvider(Protocol):
     async def complete(self, *, system: str, user: str, request_id: UUID) -> str: ...

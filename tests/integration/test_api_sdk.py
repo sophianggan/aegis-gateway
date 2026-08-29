@@ -124,6 +124,24 @@ async def test_auditor_can_verify_completed_request_chain() -> None:
     assert verification.json() == {"valid": True}
 
 
+async def test_sdk_paginates_audit_events_with_stable_sequence_cursor() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        result = await client.query("Summarize", record_ids=[DEMO_RECORDS[0].id])
+        first = await client.list_audit_events(result.request_id, limit=2)
+        second = await client.list_audit_events(
+            result.request_id, after_sequence=first.next_sequence or 0, limit=10
+        )
+
+    assert [event.sequence for event in first.events] == [0, 1]
+    assert first.has_more is True
+    assert first.next_sequence == 1
+    assert [event.sequence for event in second.events] == [2, 3, 4, 5]
+    assert second.has_more is False
+    assert second.next_sequence is None
+
+
 async def test_async_sdk_wraps_api_and_typed_response() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)

@@ -82,6 +82,8 @@ classification. Audit metadata stores counts and labels, not field values.
 These endpoints require the `auditor` role and apply revocation and rate-limit checks:
 
 - `GET /v1/audit/{request_id}` returns ordered events.
+- `GET /v1/audit/{request_id}/events?after_sequence=-1&limit=50` traverses large
+  chains with an exclusive, append-safe sequence cursor and a bounded page size.
 - `GET /v1/audit/{request_id}/verify` validates sequence, links, and event HMACs.
 - `GET /v1/audit/{request_id}/export` returns a signed evidence bundle containing the
   verified events, chain head, algorithm, and bundle signature.
@@ -152,4 +154,3 @@ headers disable caching, MIME sniffing, framing, and referrer forwarding.
 using HTTP method, route template, and status only. Raw URLs, record IDs, subjects, query
 text, field values, and model responses are deliberately excluded. Set
 `AEGIS_METRICS_ENABLED=false` to return 404 from this endpoint.
-

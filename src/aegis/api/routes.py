@@ -2,7 +2,7 @@ import asyncio
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import JSONResponse
 
 from aegis.api.dependencies import get_container, get_principal
@@ -11,6 +11,7 @@ from aegis.domain.models import (
     AuditAction,
     AuditBundle,
     AuditEvent,
+    AuditPage,
     Decision,
     PolicyPreviewRequest,
     PolicyPreviewResponse,
@@ -88,6 +89,18 @@ async def audit_events(
 ) -> list[AuditEvent]:
     await _enforce_operational_access(principal, container, required_role="auditor")
     return [event async for event in container.audit.stream(request_id)]
+
+
+@router.get("/audit/{request_id}/events", response_model=AuditPage, tags=["audit"])
+async def paginated_audit_events(
+    request_id: UUID,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+    after_sequence: Annotated[int, Query(ge=-1)] = -1,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> AuditPage:
+    await _enforce_operational_access(principal, container, required_role="auditor")
+    return await container.audit.page(request_id, after_sequence=after_sequence, limit=limit)
 
 
 @router.get("/audit/{request_id}/verify", tags=["audit"])
