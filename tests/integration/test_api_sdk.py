@@ -289,3 +289,23 @@ async def test_sdk_ingests_multiple_typed_records_in_order() -> None:
     assert all(
         receipt.highest_classification == SdkClassification.RESTRICTED for receipt in receipts
     )
+
+
+async def test_policy_preview_explains_decisions_without_values() -> None:
+    app, container, _ = await configured_app()
+    token = container.authenticator.issue_development_token(
+        subject="policy-reviewer",
+        clearance=Classification.CONFIDENTIAL,
+        compartments={"operations"},
+        roles={"policy-reviewer", "auditor"},
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        preview = await client.preview_policy([DEMO_RECORDS[0].id])
+        bundle = await client.export_audit(preview.request_id)
+
+    assert preview.records[0].allowed_fields == ["asset", "site", "status"]
+    assert preview.records[0].filtered_fields == ["access_code"]
+    assert preview.records[0].reasons == ["non_exportable"]
+    assert "OPS-7391-Z" not in preview.model_dump_json()
+    assert bundle.events[0].action == "policy.preview"

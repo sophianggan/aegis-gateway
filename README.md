@@ -110,6 +110,10 @@ instructions inside that context are quarantined. The response is scanned agains
 that were filtered plus structured credential patterns. Any finding blocks the complete
 response. Audit events store counts and decisions, never prompts or record values.
 
+Policy reviewers can call `POST /v1/policy/preview` to inspect field names, decisions,
+and denial reasons for their own identity context. It never returns field values or
+invokes the model, and the review itself is captured in the signed audit trail.
+
 Read [the architecture](docs/architecture.md), [the threat model](docs/threat-model.md),
 [the API/SDK guide](docs/api.md), and [the operations runbook](docs/runbook.md) for the full
 reasoning and residual risks.

@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import httpx
 
-from aegis_sdk.models import AuditBundle, QueryResult, RecordInput, RecordReceipt
+from aegis_sdk.models import AuditBundle, PolicyPreview, QueryResult, RecordInput, RecordReceipt
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 
@@ -72,6 +72,14 @@ class AegisClient:
     async def verify_audit(self, request_id: UUID | str) -> bool:
         response = await self._request("GET", f"/v1/audit/{request_id}/verify")
         return bool(response["valid"])
+
+    async def preview_policy(self, record_ids: Sequence[UUID | str]) -> PolicyPreview:
+        response = await self._request(
+            "POST",
+            "/v1/policy/preview",
+            json={"record_ids": [str(item) for item in record_ids]},
+        )
+        return PolicyPreview.model_validate(response)
 
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
         response = await self._request("GET", f"/v1/audit/{request_id}/export")

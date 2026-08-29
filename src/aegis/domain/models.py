@@ -40,6 +40,7 @@ class AuditAction(StrEnum):
     REQUEST_COMPLETE = "request.complete"
     REQUEST_DENY = "request.deny"
     RECORD_UPSERT = "record.upsert"
+    POLICY_PREVIEW = "policy.preview"
 
 
 class Principal(BaseModel):
@@ -105,6 +106,25 @@ class PolicyDecision(BaseModel):
     allowed_fields: dict[str, Any] = Field(default_factory=dict)
     filtered_fields: list[str] = Field(default_factory=list)
     reasons: list[str] = Field(default_factory=list)
+
+
+class PolicyPreviewRequest(BaseModel):
+    record_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+
+class RecordPolicyPreview(BaseModel):
+    record_id: UUID
+    source: str
+    decision: Decision
+    allowed_fields: list[str]
+    filtered_fields: list[str]
+    reasons: list[str]
+
+
+class PolicyPreviewResponse(BaseModel):
+    request_id: UUID
+    records: list[RecordPolicyPreview]
+    missing_record_ids: list[UUID]
 
 
 class QueryRequest(BaseModel):

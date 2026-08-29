@@ -49,6 +49,21 @@ class QueryResult(BaseModel):
     policy_summary: str
 
 
+class RecordPolicyPreview(BaseModel):
+    record_id: UUID
+    source: str
+    decision: str
+    allowed_fields: list[str]
+    filtered_fields: list[str]
+    reasons: list[str]
+
+
+class PolicyPreview(BaseModel):
+    request_id: UUID
+    records: list[RecordPolicyPreview]
+    missing_record_ids: list[UUID]
+
+
 class AuditEvent(BaseModel):
     id: UUID
     request_id: UUID

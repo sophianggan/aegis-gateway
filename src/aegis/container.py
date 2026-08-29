@@ -28,6 +28,7 @@ from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
 from aegis.services.policy import PolicyEngine
+from aegis.services.policy_preview import PolicyPreviewService
 from aegis.services.query import QueryService
 from aegis.services.rate_limit import InMemoryTokenBucket
 
@@ -43,6 +44,7 @@ class Container:
     audit: AuditTrail
     queries: QueryService
     rate_limiter: RateLimiter
+    policy_previews: PolicyPreviewService
     pool: asyncpg.Pool | None = None
 
     @classmethod
@@ -53,11 +55,12 @@ class Container:
         model = cls._build_model(settings)
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
         rate_limiter = cls._build_rate_limiter(settings)
+        policy = PolicyEngine()
         queries = QueryService(
             records=records,
             model=model,
             revocations=revocations,
-            policy=PolicyEngine(),
+            policy=policy,
             input_guard=InputGuard(),
             output_guard=OutputGuard(),
             audit=audit,
@@ -74,6 +77,12 @@ class Container:
             audit=audit,
             queries=queries,
             rate_limiter=rate_limiter,
+            policy_previews=PolicyPreviewService(
+                records=records,
+                policy=policy,
+                audit=audit,
+                max_records=settings.max_context_records,
+            ),
         )
 
     @classmethod
@@ -90,6 +99,7 @@ class Container:
         model = cls._build_model(settings)
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
         rate_limiter = cls._build_rate_limiter(settings)
+        policy = PolicyEngine()
         return cls(
             settings=settings,
             authenticator=TokenAuthenticator(settings),
@@ -102,7 +112,7 @@ class Container:
                 records=records,
                 model=model,
                 revocations=revocations,
-                policy=PolicyEngine(),
+                policy=policy,
                 input_guard=InputGuard(),
                 output_guard=OutputGuard(),
                 audit=audit,
@@ -110,6 +120,12 @@ class Container:
                 max_records=settings.max_context_records,
             ),
             rate_limiter=rate_limiter,
+            policy_previews=PolicyPreviewService(
+                records=records,
+                policy=policy,
+                audit=audit,
+                max_records=settings.max_context_records,
+            ),
             pool=pool,
         )
 

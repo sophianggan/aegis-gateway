@@ -12,6 +12,8 @@ from aegis.domain.models import (
     AuditBundle,
     AuditEvent,
     Decision,
+    PolicyPreviewRequest,
+    PolicyPreviewResponse,
     Principal,
     QueryRequest,
     QueryResponse,
@@ -66,6 +68,16 @@ async def query(
     container: Annotated[Container, Depends(get_container)],
 ) -> QueryResponse:
     return await container.queries.execute(principal, payload)
+
+
+@router.post("/policy/preview", response_model=PolicyPreviewResponse, tags=["policy"])
+async def preview_policy(
+    payload: PolicyPreviewRequest,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> PolicyPreviewResponse:
+    await _enforce_operational_access(principal, container, required_role="policy-reviewer")
+    return await container.policy_previews.execute(principal, payload)
 
 
 @router.get("/audit/{request_id}", response_model=list[AuditEvent], tags=["audit"])
