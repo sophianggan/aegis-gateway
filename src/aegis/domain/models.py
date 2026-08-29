@@ -99,6 +99,8 @@ class RecordReceipt(BaseModel):
     record_id: UUID
     field_count: int
     highest_classification: Classification
+    integrity_algorithm: str = "HMAC-SHA256"
+    integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class PolicyDecision(BaseModel):

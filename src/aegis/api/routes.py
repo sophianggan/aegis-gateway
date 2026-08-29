@@ -133,6 +133,7 @@ async def create_record(
     record = Record(id=payload.id, source=payload.source, fields=payload.fields)
     await container.records.put(record)
     request_id = uuid4()
+    integrity_digest = container.record_integrity.digest(record)
     highest = max(field.classification for field in record.fields.values())
     await container.audit.record(
         request_id=request_id,
@@ -144,6 +145,8 @@ async def create_record(
             "field_count": len(record.fields),
             "highest_classification": highest.name,
             "source": record.source,
+            "integrity_algorithm": "HMAC-SHA256",
+            "integrity_digest": integrity_digest,
         },
     )
     return RecordReceipt(
@@ -151,4 +154,5 @@ async def create_record(
         record_id=record.id,
         field_count=len(record.fields),
         highest_classification=highest,
+        integrity_digest=integrity_digest,
     )

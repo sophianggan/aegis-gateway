@@ -74,8 +74,10 @@ are both accepted.
 }
 ```
 
-The receipt carries a separate audit request ID, record ID, field count, and highest
-classification. Audit metadata stores counts and labels, not field values.
+The receipt carries a separate audit request ID, record ID, field count, highest
+classification, and a canonical keyed integrity digest. The digest is independent of
+JSON field ordering and is anchored in the signed audit event so operators can detect
+record mutation without copying any field values into the trail.
 
 ## Audit evidence
 

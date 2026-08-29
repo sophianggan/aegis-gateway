@@ -31,6 +31,7 @@ from aegis.services.policy import PolicyEngine
 from aegis.services.policy_preview import PolicyPreviewService
 from aegis.services.query import QueryService
 from aegis.services.rate_limit import InMemoryTokenBucket
+from aegis.services.record_integrity import RecordIntegrity
 
 
 @dataclass
@@ -45,6 +46,7 @@ class Container:
     queries: QueryService
     rate_limiter: RateLimiter
     policy_previews: PolicyPreviewService
+    record_integrity: RecordIntegrity
     pool: asyncpg.Pool | None = None
 
     @classmethod
@@ -83,6 +85,7 @@ class Container:
                 audit=audit,
                 max_records=settings.max_context_records,
             ),
+            record_integrity=RecordIntegrity(settings.audit_hmac_key.get_secret_value()),
         )
 
     @classmethod
@@ -126,6 +129,7 @@ class Container:
                 audit=audit,
                 max_records=settings.max_context_records,
             ),
+            record_integrity=RecordIntegrity(settings.audit_hmac_key.get_secret_value()),
             pool=pool,
         )
 

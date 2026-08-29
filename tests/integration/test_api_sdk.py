@@ -237,6 +237,8 @@ async def test_data_admin_can_ingest_classified_record_then_query_safe_fields() 
 
     assert created.status_code == 201
     assert created.json()["highest_classification"] == 30
+    assert created.json()["integrity_algorithm"] == "HMAC-SHA256"
+    assert len(created.json()["integrity_digest"]) == 64
     assert queried.status_code == 200
     assert "inspection complete" in queried.json()["answer"]
     assert "LOCAL-KEY-9912" not in queried.json()["answer"]
@@ -304,6 +306,7 @@ async def test_sdk_ingests_multiple_typed_records_in_order() -> None:
 
     assert [receipt.record_id for receipt in receipts] == [record.id for record in records]
     assert all(receipt.field_count == 2 for receipt in receipts)
+    assert all(len(receipt.integrity_digest) == 64 for receipt in receipts)
     assert all(
         receipt.highest_classification == SdkClassification.RESTRICTED for receipt in receipts
     )

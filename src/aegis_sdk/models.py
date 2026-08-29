@@ -33,6 +33,8 @@ class RecordReceipt(BaseModel):
     record_id: UUID
     field_count: int
     highest_classification: Classification
+    integrity_algorithm: str
+    integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class Citation(BaseModel):
