@@ -173,6 +173,21 @@ async def test_sdk_surfaces_gateway_error_code() -> None:
         raise AssertionError("SDK should surface authentication failures")
 
 
+async def test_query_rejects_unapproved_data_use_purpose_before_retrieval() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "Summarize", "purpose": "unapproved exploration"},
+        )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "authorization_denied"
+    assert response.json()["error"]["details"]["purpose"] == "unapproved-exploration"
+
+
 async def test_rate_limit_returns_retry_after_header() -> None:
     settings = Settings(
         environment="test",

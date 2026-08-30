@@ -57,3 +57,13 @@ def test_development_keeps_zero_infrastructure_defaults() -> None:
     settings = Settings()
     assert settings.environment == "development"
     assert settings.persistence == "memory"
+
+
+def test_normalizes_comma_separated_query_purposes() -> None:
+    settings = Settings(allowed_query_purposes="Analysis, Incident Response")  # type: ignore[arg-type]
+    assert settings.allowed_query_purposes == {"analysis", "incident-response"}
+
+
+def test_rejects_empty_query_purpose_policy() -> None:
+    with pytest.raises(ValidationError, match="at least one query purpose"):
+        Settings(allowed_query_purposes=[])

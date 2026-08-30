@@ -32,6 +32,10 @@ should replace it with managed identity validation as described in the threat mo
 
 ## Query
 
+`purpose` is an authorization input, not free-form model context. The gateway normalizes
+it to a stable slug and rejects values outside `AEGIS_ALLOWED_QUERY_PURPOSES` before
+retrieving records. The environment value accepts a JSON list or comma-separated slugs.
+
 `POST /v1/query`
 
 ```json

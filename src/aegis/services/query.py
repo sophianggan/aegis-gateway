@@ -18,6 +18,7 @@ from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
 from aegis.services.policy import EvaluatedRecord, PolicyEngine
+from aegis.services.purpose import PurposePolicy
 from aegis.services.rate_limit import NoopRateLimiter
 
 SYSTEM_BOUNDARY = """You answer only from the JSON context supplied by the gateway.
@@ -41,6 +42,7 @@ class QueryService:
         audit: AuditTrail,
         rate_limiter: RateLimiter | None = None,
         max_records: int = 20,
+        purpose_policy: PurposePolicy | None = None,
     ) -> None:
         self._records = records
         self._model = model
@@ -51,11 +53,13 @@ class QueryService:
         self._audit = audit
         self._rate_limiter = rate_limiter or NoopRateLimiter()
         self._max_records = max_records
+        self._purpose_policy = purpose_policy or PurposePolicy(frozenset({"analysis"}))
 
     async def execute(self, principal: Principal, request: QueryRequest) -> QueryResponse:
         request_id = uuid4()
         try:
             await self._authorize_token(principal, request_id)
+            approved_purpose = self._purpose_policy.enforce(request.purpose)
             ingress = self._input_guard.enforce(request.query)
             records = await self._records.fetch(request.record_ids, limit=self._max_records)
             await self._audit.record(
@@ -83,7 +87,7 @@ class QueryService:
             envelope = json.dumps(
                 {
                     "question": request.query,
-                    "purpose": request.purpose,
+                    "purpose": approved_purpose,
                     "trusted_context": context,
                 },
                 sort_keys=True,

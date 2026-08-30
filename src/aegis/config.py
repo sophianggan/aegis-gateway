@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal, Self
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -32,15 +32,31 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = Field(default=30.0, gt=0, le=300)
     max_query_characters: int = Field(default=8_000, ge=1, le=100_000)
     max_context_records: int = Field(default=20, ge=1, le=100)
+    allowed_query_purposes: frozenset[str] = frozenset(
+        {"analysis", "operations-review", "incident-response"}
+    )
     rate_limit_requests_per_minute: int = Field(default=60, ge=1, le=100_000)
     rate_limit_burst: int = Field(default=10, ge=1, le=10_000)
     rate_limit_max_identities: int = Field(default=10_000, ge=100, le=1_000_000)
     metrics_enabled: bool = True
 
+    @field_validator("allowed_query_purposes", mode="before")
+    @classmethod
+    def normalize_purposes(cls, value: object) -> object:
+        if isinstance(value, str) and not value.lstrip().startswith("["):
+            value = value.split(",")
+        if isinstance(value, (list, set, frozenset, tuple)):
+            return frozenset(
+                str(item).strip().lower().replace(" ", "-") for item in value if str(item).strip()
+            )
+        return value
+
     @model_validator(mode="after")
     def validate_runtime_safety(self) -> Self:
         if self.database_pool_min_size > self.database_pool_max_size:
             raise ValueError("database pool minimum cannot exceed maximum")
+        if not self.allowed_query_purposes:
+            raise ValueError("at least one query purpose must be allowed")
         if self.environment != "production":
             return self
 

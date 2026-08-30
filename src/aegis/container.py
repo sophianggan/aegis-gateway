@@ -29,6 +29,7 @@ from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
 from aegis.services.policy import PolicyEngine
 from aegis.services.policy_preview import PolicyPreviewService
+from aegis.services.purpose import PurposePolicy
 from aegis.services.query import QueryService
 from aegis.services.rate_limit import InMemoryTokenBucket
 from aegis.services.record_integrity import RecordIntegrity
@@ -58,6 +59,7 @@ class Container:
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
         rate_limiter = cls._build_rate_limiter(settings)
         policy = PolicyEngine()
+        purpose_policy = PurposePolicy(settings.allowed_query_purposes)
         queries = QueryService(
             records=records,
             model=model,
@@ -68,6 +70,7 @@ class Container:
             audit=audit,
             rate_limiter=rate_limiter,
             max_records=settings.max_context_records,
+            purpose_policy=purpose_policy,
         )
         return cls(
             settings=settings,
@@ -103,6 +106,7 @@ class Container:
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
         rate_limiter = cls._build_rate_limiter(settings)
         policy = PolicyEngine()
+        purpose_policy = PurposePolicy(settings.allowed_query_purposes)
         return cls(
             settings=settings,
             authenticator=TokenAuthenticator(settings),
@@ -121,6 +125,7 @@ class Container:
                 audit=audit,
                 rate_limiter=rate_limiter,
                 max_records=settings.max_context_records,
+                purpose_policy=purpose_policy,
             ),
             rate_limiter=rate_limiter,
             policy_previews=PolicyPreviewService(
