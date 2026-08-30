@@ -14,6 +14,7 @@ from aegis_sdk.models import (
     QueryResult,
     RecordInput,
     RecordReceipt,
+    TokenRevocationReceipt,
 )
 
 TokenProvider = Callable[[], str | Awaitable[str]]
@@ -114,6 +115,16 @@ class AegisClient:
             json=record.model_dump(mode="json"),
         )
         return RecordReceipt.model_validate(response)
+
+    async def revoke_token(
+        self, token_id: str, *, reason_code: str = "administrative"
+    ) -> TokenRevocationReceipt:
+        response = await self._request(
+            "POST",
+            "/v1/admin/token-revocations",
+            json={"token_id": token_id, "reason_code": reason_code},
+        )
+        return TokenRevocationReceipt.model_validate(response)
 
     async def create_records(
         self,

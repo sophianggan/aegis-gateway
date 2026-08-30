@@ -41,6 +41,7 @@ class AuditAction(StrEnum):
     REQUEST_DENY = "request.deny"
     RECORD_UPSERT = "record.upsert"
     POLICY_PREVIEW = "policy.preview"
+    TOKEN_REVOKE = "token.revoke"  # noqa: S105
 
 
 class Principal(BaseModel):
@@ -101,6 +102,16 @@ class RecordReceipt(BaseModel):
     highest_classification: Classification
     integrity_algorithm: str = "HMAC-SHA256"
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class TokenRevocationRequest(BaseModel):
+    token_id: str = Field(min_length=1, max_length=200)
+    reason_code: str = Field(default="administrative", pattern=r"^[a-z0-9][a-z0-9-]{1,49}$")
+
+
+class TokenRevocationReceipt(BaseModel):
+    request_id: UUID
+    revoked: bool = True
 
 
 class PolicyDecision(BaseModel):

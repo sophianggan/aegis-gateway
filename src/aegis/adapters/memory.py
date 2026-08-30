@@ -54,5 +54,6 @@ class InMemoryRevocationStore:
     async def is_revoked(self, token_id: str) -> bool:
         return token_id in self._revoked
 
-    def revoke(self, token_id: str) -> None:
+    async def revoke(self, token_id: str, *, reason: str) -> None:
+        del reason
         self._revoked.add(token_id)

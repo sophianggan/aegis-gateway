@@ -142,6 +142,10 @@ global quota across replicas should provide a distributed `RateLimiter` adapter.
 
 ## Errors
 
+Security administrators can revoke a credential identifier through
+`POST /v1/admin/token-revocations`. Only a constrained reason code is audited; the token
+identifier itself is deliberately excluded from signed evidence.
+
 Errors use one envelope:
 
 ```json

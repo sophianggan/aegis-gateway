@@ -11,6 +11,7 @@ from aegis_sdk.models import (
     QueryResult,
     RecordInput,
     RecordReceipt,
+    TokenRevocationReceipt,
 )
 
 __all__ = [
@@ -25,4 +26,5 @@ __all__ = [
     "QueryResult",
     "RecordInput",
     "RecordReceipt",
+    "TokenRevocationReceipt",
 ]

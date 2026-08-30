@@ -96,5 +96,8 @@ async def test_postgres_adapters_preserve_policy_metadata_and_audit_integrity() 
         revocations = PostgresRevocationStore(pool)
         assert await revocations.is_revoked(token_reference)
         assert not await revocations.is_revoked(f"active-{uuid4()}")
+        new_reference = f"api-revoked-{uuid4()}"
+        await revocations.revoke(new_reference, reason="suspected-compromise")
+        assert await revocations.is_revoked(new_reference)
     finally:
         await pool.close()

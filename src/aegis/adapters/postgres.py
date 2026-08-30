@@ -148,3 +148,15 @@ class PostgresRevocationStore:
             "SELECT EXISTS(SELECT 1 FROM revoked_tokens WHERE token_id = $1)", token_id
         )
         return bool(value)
+
+    async def revoke(self, token_id: str, *, reason: str) -> None:
+        await self._pool.execute(
+            """
+            INSERT INTO revoked_tokens (token_id, reason)
+            VALUES ($1, $2)
+            ON CONFLICT (token_id) DO UPDATE
+            SET revoked_at = now(), reason = EXCLUDED.reason
+            """,
+            token_id,
+            reason,
+        )

@@ -21,6 +21,8 @@ from aegis.domain.models import (
     Record,
     RecordCreate,
     RecordReceipt,
+    TokenRevocationReceipt,
+    TokenRevocationRequest,
 )
 from aegis.errors import AuthenticationError, AuthorizationError
 
@@ -156,3 +158,27 @@ async def create_record(
         highest_classification=highest,
         integrity_digest=integrity_digest,
     )
+
+
+@router.post(
+    "/admin/token-revocations",
+    response_model=TokenRevocationReceipt,
+    status_code=201,
+    tags=["administration"],
+)
+async def revoke_token(
+    payload: TokenRevocationRequest,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> TokenRevocationReceipt:
+    await _enforce_operational_access(principal, container, required_role="security-admin")
+    request_id = uuid4()
+    await container.revocations.revoke(payload.token_id, reason=payload.reason_code)
+    await container.audit.record(
+        request_id=request_id,
+        actor=principal.subject,
+        action=AuditAction.TOKEN_REVOKE,
+        decision=Decision.ALLOW,
+        details={"reason_code": payload.reason_code},
+    )
+    return TokenRevocationReceipt(request_id=request_id)

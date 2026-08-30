@@ -309,6 +309,35 @@ async def test_record_ingestion_requires_data_admin_role() -> None:
     assert response.json()["error"]["code"] == "authorization_denied"
 
 
+async def test_security_admin_revokes_token_through_sdk_and_audits_action() -> None:
+    app, container, _ = await configured_app()
+    admin_token = container.authenticator.issue_development_token(
+        subject="security-admin",
+        clearance=Classification.RESTRICTED,
+        roles={"security-admin", "auditor"},
+    )
+    target_token = container.authenticator.issue_development_token(
+        subject="target-user", clearance=Classification.INTERNAL
+    )
+    target_id = container.authenticator.authenticate(f"Bearer {target_token}").token_id
+    assert target_id is not None
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", admin_token, transport=transport) as client:
+        receipt = await client.revoke_token(target_id, reason_code="suspected-compromise")
+        bundle = await client.export_audit(receipt.request_id)
+    async with AegisClient("http://test", target_token, transport=transport) as target:
+        try:
+            await target.query("status")
+        except AegisClientError as exc:
+            assert exc.code == "authentication_failed"
+        else:
+            raise AssertionError("revoked credential should be denied")
+
+    assert receipt.revoked is True
+    assert bundle.events[0].action == "token.revoke"
+    assert target_id not in bundle.model_dump_json()
+
+
 async def test_metrics_use_route_templates_and_never_capture_payloads() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)
