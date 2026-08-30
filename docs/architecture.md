@@ -24,6 +24,10 @@ flowchart LR
 
 ## Request invariants
 
+The authorized context is also constrained by a deterministic byte budget. Fields are
+considered in stable name order; anything beyond `AEGIS_MAX_CONTEXT_BYTES` is filtered
+before model invocation and represented only as counts in the audit trail.
+
 1. Identity is derived only from a validated, signed token. Client-supplied body fields
    cannot change clearance, compartments, or roles.
 2. Revocation is checked before retrieval.

@@ -27,6 +27,7 @@ from aegis.security.identity import TokenAuthenticator
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
+from aegis.services.context_budget import ContextBudget
 from aegis.services.policy import PolicyEngine
 from aegis.services.policy_preview import PolicyPreviewService
 from aegis.services.purpose import PurposePolicy
@@ -71,6 +72,7 @@ class Container:
             rate_limiter=rate_limiter,
             max_records=settings.max_context_records,
             purpose_policy=purpose_policy,
+            context_budget=ContextBudget(settings.max_context_bytes),
         )
         return cls(
             settings=settings,
@@ -126,6 +128,7 @@ class Container:
                 rate_limiter=rate_limiter,
                 max_records=settings.max_context_records,
                 purpose_policy=purpose_policy,
+                context_budget=ContextBudget(settings.max_context_bytes),
             ),
             rate_limiter=rate_limiter,
             policy_previews=PolicyPreviewService(

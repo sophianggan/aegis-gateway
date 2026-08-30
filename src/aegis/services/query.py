@@ -17,6 +17,7 @@ from aegis.ports import ModelProvider, RateLimiter, RecordRepository, Revocation
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
+from aegis.services.context_budget import ContextBudget
 from aegis.services.policy import EvaluatedRecord, PolicyEngine
 from aegis.services.purpose import PurposePolicy
 from aegis.services.rate_limit import NoopRateLimiter
@@ -43,6 +44,7 @@ class QueryService:
         rate_limiter: RateLimiter | None = None,
         max_records: int = 20,
         purpose_policy: PurposePolicy | None = None,
+        context_budget: ContextBudget | None = None,
     ) -> None:
         self._records = records
         self._model = model
@@ -54,6 +56,7 @@ class QueryService:
         self._rate_limiter = rate_limiter or NoopRateLimiter()
         self._max_records = max_records
         self._purpose_policy = purpose_policy or PurposePolicy(frozenset({"analysis"}))
+        self._context_budget = context_budget or ContextBudget(64_000)
 
     async def execute(self, principal: Principal, request: QueryRequest) -> QueryResponse:
         request_id = uuid4()
@@ -73,8 +76,12 @@ class QueryService:
 
             context, evaluated = self._policy.build_safe_context(principal, records)
             context, quarantined = self._quarantine_untrusted_instructions(context)
+            budgeted = self._context_budget.apply(context)
+            context = budgeted.records
             filtered_count = (
-                sum(len(item.decision.filtered_fields) for item in evaluated) + quarantined
+                sum(len(item.decision.filtered_fields) for item in evaluated)
+                + quarantined
+                + budgeted.filtered_fields
             )
             await self._record_policy_decision(
                 principal=principal,
@@ -82,6 +89,8 @@ class QueryService:
                 evaluated=evaluated,
                 filtered_count=filtered_count,
                 ingress_finding_count=len(ingress.findings),
+                budget_filtered_count=budgeted.filtered_fields,
+                context_bytes=budgeted.retained_bytes,
             )
 
             envelope = json.dumps(
@@ -194,6 +203,8 @@ class QueryService:
         evaluated: list[EvaluatedRecord],
         filtered_count: int,
         ingress_finding_count: int,
+        budget_filtered_count: int,
+        context_bytes: int,
     ) -> None:
         allowed_count = sum(len(item.decision.allowed_fields) for item in evaluated)
         decision = Decision.FILTER if filtered_count else Decision.ALLOW
@@ -209,5 +220,7 @@ class QueryService:
                 "allowed_field_count": allowed_count,
                 "filtered_field_count": filtered_count,
                 "ingress_finding_count": ingress_finding_count,
+                "budget_filtered_count": budget_filtered_count,
+                "context_bytes": context_bytes,
             },
         )
