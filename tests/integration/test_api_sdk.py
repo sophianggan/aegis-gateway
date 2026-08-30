@@ -84,6 +84,40 @@ async def test_api_uses_stable_error_envelope() -> None:
     }
 
 
+async def test_strict_query_fails_before_model_when_a_record_is_missing() -> None:
+    app, _, token = await configured_app()
+    missing_id = "99999999-9999-4999-8999-999999999999"
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "query": "Summarize",
+                "record_ids": [str(DEMO_RECORDS[0].id), missing_id],
+                "require_all_records": True,
+            },
+        )
+
+    assert response.status_code == 404
+    assert response.json()["error"] == {
+        "code": "resource_not_found",
+        "message": "one or more requested records were not found",
+        "details": {"missing_record_ids": [missing_id]},
+    }
+
+
+async def test_non_strict_query_returns_missing_record_provenance() -> None:
+    app, _, token = await configured_app()
+    missing_id = UUID("99999999-9999-4999-8999-999999999999")
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        result = await client.query("Summarize", record_ids=[DEMO_RECORDS[0].id, missing_id])
+
+    assert result.missing_record_ids == [missing_id]
+    assert result.citations[0].record_id == DEMO_RECORDS[0].id
+
+
 async def test_readiness_probes_persistence_dependency() -> None:
     app, container, _ = await configured_app()
     transport = httpx.ASGITransport(app=app)

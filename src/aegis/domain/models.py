@@ -134,6 +134,7 @@ class QueryRequest(BaseModel):
     record_ids: list[UUID] = Field(default_factory=list, max_length=100)
     purpose: str = Field(default="analysis", min_length=1, max_length=200)
     metadata: dict[str, str] = Field(default_factory=dict)
+    require_all_records: bool = False
 
     @field_validator("query")
     @classmethod
@@ -156,6 +157,7 @@ class QueryResponse(BaseModel):
     citations: list[Citation]
     filtered_field_count: int
     policy_summary: str
+    missing_record_ids: list[UUID] = Field(default_factory=list)
 
 
 class AuditEvent(BaseModel):

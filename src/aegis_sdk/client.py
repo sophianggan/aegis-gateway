@@ -62,6 +62,7 @@ class AegisClient:
         purpose: str = "analysis",
         metadata: dict[str, str] | None = None,
         correlation_id: str | None = None,
+        require_all_records: bool = False,
     ) -> QueryResult:
         response = await self._request(
             "POST",
@@ -71,6 +72,7 @@ class AegisClient:
                 "record_ids": [str(item) for item in record_ids],
                 "purpose": purpose,
                 "metadata": metadata or {},
+                "require_all_records": require_all_records,
             },
             correlation_id=correlation_id,
         )

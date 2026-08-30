@@ -49,6 +49,7 @@ class QueryResult(BaseModel):
     citations: list[Citation]
     filtered_field_count: int
     policy_summary: str
+    missing_record_ids: list[UUID] = Field(default_factory=list)
 
 
 class RecordPolicyPreview(BaseModel):

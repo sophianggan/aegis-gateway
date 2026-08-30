@@ -12,7 +12,7 @@ from aegis.domain.models import (
     QueryRequest,
     QueryResponse,
 )
-from aegis.errors import AegisError, AuthenticationError
+from aegis.errors import AegisError, AuthenticationError, ResourceNotFoundError
 from aegis.ports import ModelProvider, RateLimiter, RecordRepository, RevocationStore
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
@@ -65,14 +65,28 @@ class QueryService:
             approved_purpose = self._purpose_policy.enforce(request.purpose)
             ingress = self._input_guard.enforce(request.query)
             records = await self._records.fetch(request.record_ids, limit=self._max_records)
+            found_ids = {record.id for record in records}
+            missing_record_ids = [
+                record_id for record_id in request.record_ids if record_id not in found_ids
+            ]
             await self._audit.record(
                 request_id=request_id,
                 actor=principal.subject,
                 action=AuditAction.RETRIEVE,
-                decision=Decision.ALLOW,
+                decision=Decision.FILTER if missing_record_ids else Decision.ALLOW,
                 resource_ids=[str(record.id) for record in records],
-                details={"requested": len(request.record_ids), "found": len(records)},
+                details={
+                    "requested": len(request.record_ids),
+                    "found": len(records),
+                    "missing": len(missing_record_ids),
+                    "strict": request.require_all_records,
+                },
             )
+            if request.require_all_records and missing_record_ids:
+                raise ResourceNotFoundError(
+                    "one or more requested records were not found",
+                    details={"missing_record_ids": [str(item) for item in missing_record_ids]},
+                )
 
             context, evaluated = self._policy.build_safe_context(principal, records)
             context, quarantined = self._quarantine_untrusted_instructions(context)
@@ -147,6 +161,7 @@ class QueryService:
                 citations=citations,
                 filtered_field_count=filtered_count,
                 policy_summary="authorized fields only; output inspection passed",
+                missing_record_ids=missing_record_ids,
             )
         except AegisError as exc:
             await self._audit.record(

@@ -41,3 +41,8 @@ class RateLimitError(AegisError):
 class AuditIntegrityError(AegisError):
     code = "audit_integrity_failed"
     status_code = 409
+
+
+class ResourceNotFoundError(AegisError):
+    code = "resource_not_found"
+    status_code = 404
