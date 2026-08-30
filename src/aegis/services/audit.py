@@ -7,7 +7,14 @@ from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
-from aegis.domain.models import AuditAction, AuditBundle, AuditEvent, AuditPage, Decision
+from aegis.domain.models import (
+    AuditAction,
+    AuditBundle,
+    AuditCheckpoint,
+    AuditEvent,
+    AuditPage,
+    Decision,
+)
 from aegis.errors import AuditIntegrityError
 from aegis.ports import AuditRepository
 
@@ -98,6 +105,28 @@ class AuditTrail:
             return False
         unsigned = bundle.model_copy(update={"bundle_signature": ""})
         return hmac.compare_digest(bundle.bundle_signature, self._bundle_signature(unsigned))
+
+    def _checkpoint_signature(self, checkpoint: AuditCheckpoint) -> str:
+        payload = checkpoint.model_dump(mode="json", exclude={"signature"})
+        canonical = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hmac.new(self._key, canonical, hashlib.sha256).hexdigest()
+
+    async def checkpoint(self, request_id: UUID) -> AuditCheckpoint:
+        events = [event async for event in self._repository.stream(request_id)]
+        if not self._verify_events(events):
+            raise AuditIntegrityError(
+                "audit chain cannot be checkpointed because verification failed"
+            )
+        checkpoint = AuditCheckpoint(
+            request_id=request_id,
+            event_count=len(events),
+            chain_head=events[-1].event_hash,
+        )
+        return checkpoint.model_copy(update={"signature": self._checkpoint_signature(checkpoint)})
+
+    def verify_checkpoint(self, checkpoint: AuditCheckpoint) -> bool:
+        unsigned = checkpoint.model_copy(update={"signature": ""})
+        return hmac.compare_digest(checkpoint.signature, self._checkpoint_signature(unsigned))
 
     async def stream(self, request_id: UUID) -> AsyncIterator[AuditEvent]:
         async for event in self._repository.stream(request_id):

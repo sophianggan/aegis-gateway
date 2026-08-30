@@ -9,6 +9,7 @@ import httpx
 
 from aegis_sdk.models import (
     AuditBundle,
+    AuditCheckpoint,
     AuditPage,
     PolicyPreview,
     QueryResult,
@@ -95,6 +96,10 @@ class AegisClient:
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
         response = await self._request("GET", f"/v1/audit/{request_id}/export")
         return AuditBundle.model_validate(response)
+
+    async def create_audit_checkpoint(self, request_id: UUID | str) -> AuditCheckpoint:
+        response = await self._request("GET", f"/v1/audit/{request_id}/checkpoint")
+        return AuditCheckpoint.model_validate(response)
 
     async def list_audit_events(
         self, request_id: UUID | str, *, after_sequence: int = -1, limit: int = 50

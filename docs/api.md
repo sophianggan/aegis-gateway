@@ -97,6 +97,8 @@ These endpoints require the `auditor` role and apply revocation and rate-limit c
 - `GET /v1/audit/{request_id}/verify` validates sequence, links, and event HMACs.
 - `GET /v1/audit/{request_id}/export` returns a signed evidence bundle containing the
   verified events, chain head, algorithm, and bundle signature.
+- `GET /v1/audit/{request_id}/checkpoint` returns only the signed chain head and event
+  count, suitable for external pinning without exporting the underlying events.
 
 An export fails with `409 audit_integrity_failed` if the stored chain is absent or invalid.
 Auditors holding the separately controlled verification key can validate a bundle offline

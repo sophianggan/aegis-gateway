@@ -207,3 +207,13 @@ class AuditPage(BaseModel):
     events: list[AuditEvent]
     next_sequence: int | None = None
     has_more: bool = False
+
+
+class AuditCheckpoint(BaseModel):
+    version: str = "aegis.checkpoint.v1"
+    request_id: UUID
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    event_count: int = Field(ge=1)
+    chain_head: str = Field(pattern=r"^[a-f0-9]{64}$")
+    signature_algorithm: str = "HMAC-SHA256"
+    signature: str = Field(default="", pattern=r"^$|^[a-f0-9]{64}$")

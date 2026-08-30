@@ -10,6 +10,7 @@ from aegis.container import Container
 from aegis.domain.models import (
     AuditAction,
     AuditBundle,
+    AuditCheckpoint,
     AuditEvent,
     AuditPage,
     Decision,
@@ -124,6 +125,16 @@ async def export_audit_bundle(
 ) -> AuditBundle:
     await _enforce_operational_access(principal, container, required_role="auditor")
     return await container.audit.export(request_id)
+
+
+@router.get("/audit/{request_id}/checkpoint", response_model=AuditCheckpoint, tags=["audit"])
+async def create_audit_checkpoint(
+    request_id: UUID,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> AuditCheckpoint:
+    await _enforce_operational_access(principal, container, required_role="auditor")
+    return await container.audit.checkpoint(request_id)
 
 
 @router.post("/records", response_model=RecordReceipt, status_code=201, tags=["records"])

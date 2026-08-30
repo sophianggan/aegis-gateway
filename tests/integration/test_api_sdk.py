@@ -176,6 +176,19 @@ async def test_sdk_paginates_audit_events_with_stable_sequence_cursor() -> None:
     assert second.next_sequence is None
 
 
+async def test_sdk_creates_compact_signed_audit_checkpoint() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        result = await client.query("Summarize", record_ids=[DEMO_RECORDS[0].id])
+        checkpoint = await client.create_audit_checkpoint(result.request_id)
+
+    assert checkpoint.request_id == result.request_id
+    assert checkpoint.event_count == 6
+    assert len(checkpoint.chain_head) == 64
+    assert len(checkpoint.signature) == 64
+
+
 async def test_async_sdk_wraps_api_and_typed_response() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)

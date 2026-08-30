@@ -103,3 +103,29 @@ async def test_refuses_to_export_tampered_chain() -> None:
 
     with pytest.raises(AuditIntegrityError):
         await trail.export(request_id)
+
+
+async def test_signed_checkpoint_pins_verified_chain_head() -> None:
+    repository = InMemoryAuditRepository()
+    trail = AuditTrail(repository, "checkpoint-signing-key-long-enough")
+    request_id = uuid4()
+    event = await trail.record(
+        request_id=request_id,
+        actor="reviewer",
+        action=AuditAction.REQUEST_COMPLETE,
+        decision=Decision.ALLOW,
+    )
+
+    checkpoint = await trail.checkpoint(request_id)
+
+    assert checkpoint.event_count == 1
+    assert checkpoint.chain_head == event.event_hash
+    assert len(checkpoint.signature) == 64
+    assert trail.verify_checkpoint(checkpoint)
+    assert not trail.verify_checkpoint(checkpoint.model_copy(update={"event_count": 2}))
+
+
+async def test_checkpoint_rejects_missing_chain() -> None:
+    trail = AuditTrail(InMemoryAuditRepository(), "checkpoint-signing-key-long-enough")
+    with pytest.raises(AuditIntegrityError):
+        await trail.checkpoint(uuid4())

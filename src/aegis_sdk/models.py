@@ -107,3 +107,13 @@ class AuditPage(BaseModel):
     events: list[AuditEvent]
     next_sequence: int | None
     has_more: bool
+
+
+class AuditCheckpoint(BaseModel):
+    version: str
+    request_id: UUID
+    generated_at: datetime
+    event_count: int
+    chain_head: str
+    signature_algorithm: str
+    signature: str
