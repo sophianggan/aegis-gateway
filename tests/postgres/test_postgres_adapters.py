@@ -59,6 +59,8 @@ async def test_postgres_adapters_preserve_policy_metadata_and_audit_integrity() 
         assert loaded == [record]
         assert loaded[0].fields["summary"].compartments == {"operations"}
         assert not loaded[0].fields["local_only"].exportable
+        assert await records.delete(record.id)
+        assert await records.fetch([record.id], limit=1) == []
 
         audit_repository = PostgresAuditRepository(pool)
         audit = AuditTrail(audit_repository, "postgres-integration-audit-key")

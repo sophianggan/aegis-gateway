@@ -20,6 +20,9 @@ class InMemoryRecordRepository:
     async def put(self, record: Record) -> None:
         self._records[record.id] = record
 
+    async def delete(self, record_id: UUID) -> bool:
+        return self._records.pop(record_id, None) is not None
+
 
 class InMemoryAuditRepository:
     def __init__(self) -> None:

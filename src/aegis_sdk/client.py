@@ -12,6 +12,7 @@ from aegis_sdk.models import (
     AuditPage,
     PolicyPreview,
     QueryResult,
+    RecordDeletionReceipt,
     RecordInput,
     RecordReceipt,
     TokenRevocationReceipt,
@@ -115,6 +116,10 @@ class AegisClient:
             json=record.model_dump(mode="json"),
         )
         return RecordReceipt.model_validate(response)
+
+    async def delete_record(self, record_id: UUID | str) -> RecordDeletionReceipt:
+        response = await self._request("DELETE", f"/v1/records/{record_id}")
+        return RecordDeletionReceipt.model_validate(response)
 
     async def revoke_token(
         self, token_id: str, *, reason_code: str = "administrative"

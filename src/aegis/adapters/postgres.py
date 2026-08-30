@@ -62,6 +62,10 @@ class PostgresRecordRepository:
             record.created_at,
         )
 
+    async def delete(self, record_id: UUID) -> bool:
+        status = await self._pool.execute("DELETE FROM records WHERE id = $1", record_id)
+        return str(status) == "DELETE 1"
+
 
 class PostgresAuditRepository:
     def __init__(self, pool: asyncpg.Pool) -> None:

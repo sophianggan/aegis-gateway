@@ -309,6 +309,46 @@ async def test_record_ingestion_requires_data_admin_role() -> None:
     assert response.json()["error"]["code"] == "authorization_denied"
 
 
+async def test_data_admin_retires_record_but_preserves_audit_evidence() -> None:
+    app, container, _ = await configured_app()
+    token = container.authenticator.issue_development_token(
+        subject="retention-admin",
+        clearance=Classification.RESTRICTED,
+        roles={"data-admin", "auditor"},
+    )
+    record = RecordInput(
+        source="retention-test",
+        fields={
+            "summary": ClassifiedValue(value="expired", classification=SdkClassification.PUBLIC)
+        },
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        created = await client.create_record(record)
+        retired = await client.delete_record(created.record_id)
+        result = await client.query("Summarize", record_ids=[created.record_id])
+        evidence = await client.export_audit(retired.request_id)
+
+    assert retired.deleted is True
+    assert result.missing_record_ids == [created.record_id]
+    assert evidence.events[0].action == "record.delete"
+
+
+async def test_record_retirement_is_idempotent_and_audited() -> None:
+    app, container, _ = await configured_app()
+    token = container.authenticator.issue_development_token(
+        subject="retention-admin",
+        clearance=Classification.RESTRICTED,
+        roles={"data-admin"},
+    )
+    missing = UUID("88888888-8888-4888-8888-888888888888")
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        receipt = await client.delete_record(missing)
+    assert receipt.deleted is False
+    assert receipt.record_id == missing
+
+
 async def test_security_admin_revokes_token_through_sdk_and_audits_action() -> None:
     app, container, _ = await configured_app()
     admin_token = container.authenticator.issue_development_token(

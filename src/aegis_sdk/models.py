@@ -37,6 +37,12 @@ class RecordReceipt(BaseModel):
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
+class RecordDeletionReceipt(BaseModel):
+    request_id: UUID
+    record_id: UUID
+    deleted: bool
+
+
 class TokenRevocationReceipt(BaseModel):
     request_id: UUID
     revoked: bool

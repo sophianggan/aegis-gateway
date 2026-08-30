@@ -42,6 +42,7 @@ class AuditAction(StrEnum):
     RECORD_UPSERT = "record.upsert"
     POLICY_PREVIEW = "policy.preview"
     TOKEN_REVOKE = "token.revoke"  # noqa: S105
+    RECORD_DELETE = "record.delete"
 
 
 class Principal(BaseModel):
@@ -102,6 +103,12 @@ class RecordReceipt(BaseModel):
     highest_classification: Classification
     integrity_algorithm: str = "HMAC-SHA256"
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class RecordDeletionReceipt(BaseModel):
+    request_id: UUID
+    record_id: UUID
+    deleted: bool
 
 
 class TokenRevocationRequest(BaseModel):

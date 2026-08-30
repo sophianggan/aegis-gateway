@@ -29,7 +29,11 @@ def test_load_migrations_returns_ordered_sql() -> None:
     migrations = cli._load_migrations()
     names = [name for name, _ in migrations]
     assert names == sorted(names)
-    assert names == ["001_initial.sql", "002_database_roles.sql"]
+    assert names == [
+        "001_initial.sql",
+        "002_database_roles.sql",
+        "003_runtime_administration.sql",
+    ]
     assert all(sql.startswith("BEGIN;") for _, sql in migrations)
 
 

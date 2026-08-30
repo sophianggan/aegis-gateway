@@ -20,6 +20,7 @@ from aegis.domain.models import (
     QueryResponse,
     Record,
     RecordCreate,
+    RecordDeletionReceipt,
     RecordReceipt,
     TokenRevocationReceipt,
     TokenRevocationRequest,
@@ -158,6 +159,26 @@ async def create_record(
         highest_classification=highest,
         integrity_digest=integrity_digest,
     )
+
+
+@router.delete("/records/{record_id}", response_model=RecordDeletionReceipt, tags=["records"])
+async def delete_record(
+    record_id: UUID,
+    principal: Annotated[Principal, Depends(get_principal)],
+    container: Annotated[Container, Depends(get_container)],
+) -> RecordDeletionReceipt:
+    await _enforce_operational_access(principal, container, required_role="data-admin")
+    request_id = uuid4()
+    deleted = await container.records.delete(record_id)
+    await container.audit.record(
+        request_id=request_id,
+        actor=principal.subject,
+        action=AuditAction.RECORD_DELETE,
+        decision=Decision.ALLOW if deleted else Decision.DENY,
+        resource_ids=[str(record_id)],
+        details={"deleted": deleted},
+    )
+    return RecordDeletionReceipt(request_id=request_id, record_id=record_id, deleted=deleted)
 
 
 @router.post(
