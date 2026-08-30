@@ -1,7 +1,7 @@
 import pytest
 
 from aegis.errors import RateLimitError
-from aegis.services.rate_limit import InMemoryTokenBucket
+from aegis.services.rate_limit import InMemoryTokenBucket, PostgresFixedWindowRateLimiter
 
 
 class Clock:
@@ -60,3 +60,16 @@ async def test_evicts_oldest_bucket_at_cardinality_limit() -> None:
 def test_rejects_invalid_parameters() -> None:
     with pytest.raises(ValueError, match="must be positive"):
         InMemoryTokenBucket(requests_per_minute=0, burst=1)
+
+
+def test_distributed_limiter_pseudonymizes_identity_deterministically() -> None:
+    limiter = PostgresFixedWindowRateLimiter(
+        None,  # type: ignore[arg-type]
+        signing_key="distributed-limit-key-long-enough",
+        requests_per_minute=10,
+        burst=2,
+    )
+    digest = limiter._identity_hash("user@example.test")
+    assert len(digest) == 64
+    assert "user@example.test" not in digest
+    assert digest == limiter._identity_hash("user@example.test")

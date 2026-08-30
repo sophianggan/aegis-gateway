@@ -17,7 +17,9 @@ from aegis.domain.models import (
     Decision,
     Record,
 )
+from aegis.errors import RateLimitError
 from aegis.services.audit import AuditTrail
+from aegis.services.rate_limit import PostgresFixedWindowRateLimiter
 
 MIGRATIONS = [path.read_text() for path in sorted(Path("migrations").glob("*.sql"))]
 
@@ -101,5 +103,19 @@ async def test_postgres_adapters_preserve_policy_metadata_and_audit_integrity() 
         new_reference = f"api-revoked-{uuid4()}"
         await revocations.revoke(new_reference, reason="suspected-compromise")
         assert await revocations.is_revoked(new_reference)
+
+        limiter = PostgresFixedWindowRateLimiter(
+            pool,
+            signing_key="postgres-rate-limit-test-key",
+            requests_per_minute=1,
+            burst=1,
+        )
+        await limiter.enforce("distributed-user")
+        await limiter.enforce("distributed-user")
+        with pytest.raises(RateLimitError):
+            await limiter.enforce("distributed-user")
+        stored_hash = await pool.fetchval("SELECT identity_hash FROM rate_limit_buckets LIMIT 1")
+        assert stored_hash != "distributed-user"
+        assert len(stored_hash) == 64
     finally:
         await pool.close()

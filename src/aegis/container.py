@@ -32,7 +32,7 @@ from aegis.services.policy import PolicyEngine
 from aegis.services.policy_preview import PolicyPreviewService
 from aegis.services.purpose import PurposePolicy
 from aegis.services.query import QueryService
-from aegis.services.rate_limit import InMemoryTokenBucket
+from aegis.services.rate_limit import InMemoryTokenBucket, PostgresFixedWindowRateLimiter
 from aegis.services.record_integrity import RecordIntegrity
 
 
@@ -106,7 +106,12 @@ class Container:
         revocations = PostgresRevocationStore(pool)
         model = cls._build_model(settings)
         audit = AuditTrail(audit_repository, settings.audit_hmac_key.get_secret_value())
-        rate_limiter = cls._build_rate_limiter(settings)
+        rate_limiter = PostgresFixedWindowRateLimiter(
+            pool,
+            signing_key=settings.audit_hmac_key.get_secret_value(),
+            requests_per_minute=settings.rate_limit_requests_per_minute,
+            burst=settings.rate_limit_burst,
+        )
         policy = PolicyEngine()
         purpose_policy = PurposePolicy(settings.allowed_query_purposes)
         return cls(

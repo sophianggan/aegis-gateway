@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
 import math
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+
+import asyncpg
 
 from aegis.errors import RateLimitError
 
@@ -70,3 +74,53 @@ class InMemoryTokenBucket:
             return
         oldest = min(self._buckets, key=lambda key: self._buckets[key].updated_at)
         del self._buckets[oldest]
+
+
+class PostgresFixedWindowRateLimiter:
+    """Coordinate pseudonymous per-identity quotas across gateway replicas."""
+
+    def __init__(
+        self,
+        pool: asyncpg.Pool,
+        *,
+        signing_key: str,
+        requests_per_minute: int,
+        burst: int,
+    ) -> None:
+        if len(signing_key) < 16:
+            raise ValueError("rate limit signing key must contain at least 16 characters")
+        if requests_per_minute < 1 or burst < 1:
+            raise ValueError("rate limit parameters must be positive")
+        self._pool = pool
+        self._key = signing_key.encode()
+        self._limit = requests_per_minute + burst
+
+    def _identity_hash(self, identity: str) -> str:
+        return hmac.new(self._key, identity.encode(), hashlib.sha256).hexdigest()
+
+    async def enforce(self, identity: str) -> None:
+        row = await self._pool.fetchrow(
+            """
+            WITH boundary AS (SELECT date_trunc('minute', clock_timestamp()) AS value)
+            INSERT INTO rate_limit_buckets (identity_hash, window_start, request_count)
+            VALUES ($1, (SELECT value FROM boundary), 1)
+            ON CONFLICT (identity_hash) DO UPDATE SET
+                request_count = CASE
+                    WHEN rate_limit_buckets.window_start < EXCLUDED.window_start THEN 1
+                    ELSE rate_limit_buckets.request_count + 1
+                END,
+                window_start = GREATEST(rate_limit_buckets.window_start, EXCLUDED.window_start)
+            RETURNING request_count,
+                GREATEST(1, CEIL(EXTRACT(EPOCH FROM (
+                    window_start + interval '1 minute' - clock_timestamp()
+                )))::integer) AS retry_after
+            """,
+            self._identity_hash(identity),
+        )
+        if row is not None and int(row["request_count"]) <= self._limit:
+            return
+        retry_after = int(row["retry_after"]) if row is not None else 60
+        raise RateLimitError(
+            "request rate exceeded for this identity",
+            details={"retry_after_seconds": retry_after},
+        )

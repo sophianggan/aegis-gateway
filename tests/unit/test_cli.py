@@ -33,6 +33,7 @@ def test_load_migrations_returns_ordered_sql() -> None:
         "001_initial.sql",
         "002_database_roles.sql",
         "003_runtime_administration.sql",
+        "004_distributed_rate_limits.sql",
     ]
     assert all(sql.startswith("BEGIN;") for _, sql in migrations)
 

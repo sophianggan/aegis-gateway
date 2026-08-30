@@ -76,6 +76,10 @@ and resource identifiers rather than prompts, record values, tokens, or model ou
 
 ## Scale and availability
 
+PostgreSQL deployments coordinate fixed-window quotas through pseudonymous HMAC identity
+keys, so a caller cannot evade limits by reaching another replica and raw identities are
+never stored in the quota table. Memory deployments retain the local token bucket.
+
 Gateway processes are stateless when PostgreSQL is enabled. The Kubernetes deployment
 starts with three replicas, has a disruption budget, and scales horizontally on CPU.
 Database connections are pooled per process. Model requests carry an idempotency key so a
