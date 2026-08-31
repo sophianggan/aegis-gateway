@@ -65,7 +65,8 @@ the names or values of fields the caller could not access.
 ## Classified record ingestion
 
 `POST /v1/records` requires the `data-admin` role. Classification names and numeric values
-are both accepted.
+are both accepted. Field names are limited to 64 characters, must begin with a letter,
+and may contain only letters, digits, underscores, periods, or hyphens.
 
 ```json
 {

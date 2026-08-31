@@ -374,6 +374,28 @@ async def test_record_ingestion_requires_data_admin_role() -> None:
     assert response.json()["error"]["code"] == "authorization_denied"
 
 
+async def test_record_ingestion_rejects_unsafe_field_names() -> None:
+    app, container, _ = await configured_app()
+    token = container.authenticator.issue_development_token(
+        subject="data-steward",
+        clearance=Classification.INTERNAL,
+        roles={"data-admin"},
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/records",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "source": "controlled-import",
+                "fields": {"../secret": {"value": "unsafe", "classification": "PUBLIC"}},
+            },
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == "fields"
+
+
 async def test_data_admin_retires_record_but_preserves_audit_evidence() -> None:
     app, container, _ = await configured_app()
     token = container.authenticator.issue_development_token(

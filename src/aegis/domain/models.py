@@ -8,6 +8,19 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
+def _validate_field_names(fields: dict[str, DataField]) -> dict[str, DataField]:
+    for name in fields:
+        if not name or len(name) > 64:
+            raise ValueError("field names must contain between 1 and 64 characters")
+        if not name[0].isalpha() or any(
+            not (character.isalnum() or character in "_.-") for character in name
+        ):
+            raise ValueError(
+                "field names must start with a letter and use letters, digits, _, ., or -"
+            )
+    return fields
+
+
 class Classification(IntEnum):
     """Ordered sensitivity labels; a principal may access its level and below."""
 
@@ -89,11 +102,21 @@ class Record(BaseModel):
     fields: dict[str, DataField]
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
+    @field_validator("fields")
+    @classmethod
+    def validate_field_names(cls, value: dict[str, DataField]) -> dict[str, DataField]:
+        return _validate_field_names(value)
+
 
 class RecordCreate(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     source: str = Field(min_length=1, max_length=100)
     fields: dict[str, DataField] = Field(min_length=1, max_length=200)
+
+    @field_validator("fields")
+    @classmethod
+    def validate_field_names(cls, value: dict[str, DataField]) -> dict[str, DataField]:
+        return _validate_field_names(value)
 
 
 class RecordReceipt(BaseModel):
