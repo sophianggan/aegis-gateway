@@ -46,3 +46,8 @@ class AuditIntegrityError(AegisError):
 class ResourceNotFoundError(AegisError):
     code = "resource_not_found"
     status_code = 404
+
+
+class RequestLimitError(AegisError):
+    code = "request_limit_exceeded"
+    status_code = 413

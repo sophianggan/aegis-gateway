@@ -12,7 +12,7 @@ from aegis.domain.models import (
     QueryRequest,
     QueryResponse,
 )
-from aegis.errors import AegisError, AuthenticationError, ResourceNotFoundError
+from aegis.errors import AegisError, AuthenticationError, RequestLimitError, ResourceNotFoundError
 from aegis.ports import ModelProvider, RateLimiter, RecordRepository, RevocationStore
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
@@ -64,6 +64,11 @@ class QueryService:
             await self._authorize_token(principal, request_id)
             approved_purpose = self._purpose_policy.enforce(request.purpose)
             ingress = self._input_guard.enforce(request.query)
+            if len(request.record_ids) > self._max_records:
+                raise RequestLimitError(
+                    "query exceeds the configured record limit",
+                    details={"max_records": self._max_records},
+                )
             records = await self._records.fetch(request.record_ids, limit=self._max_records)
             found_ids = {record.id for record in records}
             missing_record_ids = [

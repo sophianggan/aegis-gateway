@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import FastAPI
@@ -116,6 +116,24 @@ async def test_query_rejects_duplicate_record_identifiers() -> None:
 
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"][-1] == "record_ids"
+
+
+async def test_query_fails_explicitly_above_configured_record_limit() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "status", "record_ids": [str(uuid4()) for _ in range(21)]},
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"] == {
+        "code": "request_limit_exceeded",
+        "message": "query exceeds the configured record limit",
+        "details": {"max_records": 20},
+    }
 
 
 async def test_strict_query_fails_before_model_when_a_record_is_missing() -> None:

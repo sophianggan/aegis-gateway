@@ -44,6 +44,8 @@ Set `require_all_records` to `true` when partial analysis is unsafe. Missing rec
 produce `404 resource_not_found` before model invocation. Non-strict responses include
 `missing_record_ids` so callers can distinguish complete answers from partial ones.
 Record identifier lists must be unique for both queries and policy previews.
+Queries above `AEGIS_MAX_CONTEXT_RECORDS` fail with `413 request_limit_exceeded` rather
+than silently analyzing only a prefix of the requested records.
 
 `POST /v1/query`
 
