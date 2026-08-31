@@ -143,6 +143,9 @@ Bulk SDK ingestion bounds concurrency between 1 and 32 and preserves input order
 failed request raises `AegisClientError`; callers choose whether to retry the full batch or
 the remaining records.
 
+Audit consumers can use `iter_audit_events(request_id, page_size=50)` as an async
+iterator; the SDK follows stable sequence cursors until the complete history is read.
+
 ## Rate limits
 
 Limits are keyed by trusted principal subject. A rejected request returns status `429`, a

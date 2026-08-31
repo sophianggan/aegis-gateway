@@ -66,3 +66,9 @@ async def test_bulk_ingestion_validates_concurrency_before_request() -> None:
     async with AegisClient("https://gateway.internal", "token") as client:
         with pytest.raises(ValueError, match="between 1 and 32"):
             await client.create_records([], concurrency=0)
+
+
+async def test_audit_iterator_rejects_invalid_page_size_before_request() -> None:
+    async with AegisClient("https://gateway.internal", "token") as client:
+        with pytest.raises(ValueError, match="between 1 and 200"):
+            await anext(client.iter_audit_events("request-id", page_size=0))

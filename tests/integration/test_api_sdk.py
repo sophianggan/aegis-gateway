@@ -228,6 +228,20 @@ async def test_sdk_paginates_audit_events_with_stable_sequence_cursor() -> None:
     assert second.next_sequence is None
 
 
+async def test_sdk_iterates_complete_audit_history_across_pages() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with AegisClient("http://test", token, transport=transport) as client:
+        result = await client.query("Summarize", record_ids=[DEMO_RECORDS[0].id])
+        events = [
+            event
+            async for event in client.iter_audit_events(result.request_id, page_size=2)
+        ]
+
+    assert [event.sequence for event in events] == list(range(6))
+    assert events[-1].action == "request.complete"
+
+
 async def test_sdk_creates_compact_signed_audit_checkpoint() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)

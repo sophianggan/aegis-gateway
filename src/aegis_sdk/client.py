@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -10,6 +10,7 @@ import httpx
 from aegis_sdk.models import (
     AuditBundle,
     AuditCheckpoint,
+    AuditEvent,
     AuditPage,
     PolicyPreview,
     QueryResult,
@@ -113,6 +114,24 @@ class AegisClient:
             f"/v1/audit/{request_id}/events?after_sequence={after_sequence}&limit={limit}",
         )
         return AuditPage.model_validate(response)
+
+    async def iter_audit_events(
+        self, request_id: UUID | str, *, page_size: int = 50
+    ) -> AsyncIterator[AuditEvent]:
+        after_sequence = -1
+        while True:
+            page = await self.list_audit_events(
+                request_id,
+                after_sequence=after_sequence,
+                limit=page_size,
+            )
+            for event in page.events:
+                yield event
+            if not page.has_more:
+                return
+            if page.next_sequence is None:
+                raise AegisClientError("gateway returned an invalid audit cursor")
+            after_sequence = page.next_sequence
 
     async def create_record(self, record: RecordInput) -> RecordReceipt:
         response = await self._request(
