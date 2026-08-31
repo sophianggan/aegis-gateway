@@ -84,6 +84,25 @@ async def test_api_uses_stable_error_envelope() -> None:
     }
 
 
+async def test_query_metadata_is_bounded_and_normalized() -> None:
+    app, _, token = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        accepted = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "status", "metadata": {" Trace-ID ": " 123 "}},
+        )
+        rejected = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "status", "metadata": {"trace-id": "x" * 257}},
+        )
+
+    assert accepted.status_code == 200
+    assert rejected.status_code == 422
+
+
 async def test_strict_query_fails_before_model_when_a_record_is_missing() -> None:
     app, _, token = await configured_app()
     missing_id = "99999999-9999-4999-8999-999999999999"

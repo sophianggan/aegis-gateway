@@ -36,6 +36,10 @@ should replace it with managed identity validation as described in the threat mo
 it to a stable slug and rejects values outside `AEGIS_ALLOWED_QUERY_PURPOSES` before
 retrieving records. The environment value accepts a JSON list or comma-separated slugs.
 
+`metadata` is optional and never crosses the model boundary. It accepts at most 20
+entries; keys are normalized to lowercase and bounded to 64 characters, while values
+are bounded to 256 characters.
+
 Set `require_all_records` to `true` when partial analysis is unsafe. Missing records then
 produce `404 resource_not_found` before model invocation. Non-strict responses include
 `missing_record_ids` so callers can distinguish complete answers from partial ones.

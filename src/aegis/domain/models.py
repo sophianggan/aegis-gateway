@@ -151,7 +151,7 @@ class QueryRequest(BaseModel):
     query: str = Field(min_length=1, max_length=8_000)
     record_ids: list[UUID] = Field(default_factory=list, max_length=100)
     purpose: str = Field(default="analysis", min_length=1, max_length=200)
-    metadata: dict[str, str] = Field(default_factory=dict)
+    metadata: dict[str, str] = Field(default_factory=dict, max_length=20)
     require_all_records: bool = False
 
     @field_validator("query")
@@ -161,6 +161,22 @@ class QueryRequest(BaseModel):
         if not cleaned:
             raise ValueError("query must not be blank")
         return cleaned
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_metadata(cls, value: dict[str, str]) -> dict[str, str]:
+        normalized: dict[str, str] = {}
+        for key, item in value.items():
+            clean_key = key.strip().lower()
+            clean_value = item.strip()
+            if not clean_key or len(clean_key) > 64:
+                raise ValueError("metadata keys must contain between 1 and 64 characters")
+            if len(clean_value) > 256:
+                raise ValueError("metadata values must contain at most 256 characters")
+            if clean_key in normalized:
+                raise ValueError("metadata keys must be unique after normalization")
+            normalized[clean_key] = clean_value
+        return normalized
 
 
 class Citation(BaseModel):
