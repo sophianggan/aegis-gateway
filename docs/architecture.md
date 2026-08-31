@@ -71,10 +71,10 @@ without weakening the database's append-only controls.
 ### Failure model
 
 Authorization, inspection, and upstream parsing fail closed. An unavailable model never
-causes an uninspected fallback. Denied output inspections are recorded explicitly with
-payload-free finding counts and categories. Audit records intentionally contain counts,
-stable codes, and resource identifiers rather than prompts, record values, tokens, or
-model output.
+causes an uninspected fallback. Denied model invocations record only a stable error code;
+denied output inspections record payload-free finding counts and categories. Audit
+records intentionally contain counts, stable codes, and resource identifiers rather than
+prompts, record values, tokens, provider errors, or model output.
 
 ## Scale and availability
 

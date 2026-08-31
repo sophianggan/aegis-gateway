@@ -18,6 +18,7 @@ from aegis.errors import (
     PolicyViolationError,
     RequestLimitError,
     ResourceNotFoundError,
+    UpstreamModelError,
 )
 from aegis.ports import ModelProvider, RateLimiter, RecordRepository, RevocationStore
 from aegis.security.input_guard import InputGuard
@@ -128,11 +129,21 @@ class QueryService:
                 separators=(",", ":"),
                 default=str,
             )
-            answer = await self._model.complete(
-                system=SYSTEM_BOUNDARY,
-                user=envelope,
-                request_id=request_id,
-            )
+            try:
+                answer = await self._model.complete(
+                    system=SYSTEM_BOUNDARY,
+                    user=envelope,
+                    request_id=request_id,
+                )
+            except UpstreamModelError as exc:
+                await self._audit.record(
+                    request_id=request_id,
+                    actor=principal.subject,
+                    action=AuditAction.MODEL_INVOKE,
+                    decision=Decision.DENY,
+                    details={"error_code": exc.code},
+                )
+                raise
             await self._audit.record(
                 request_id=request_id,
                 actor=principal.subject,

@@ -19,7 +19,7 @@ from aegis.domain.models import (
     QueryRequest,
     Record,
 )
-from aegis.errors import AuthenticationError, PolicyViolationError
+from aegis.errors import AuthenticationError, PolicyViolationError, UpstreamModelError
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
@@ -35,6 +35,12 @@ class CapturingModel:
     async def complete(self, *, system: str, user: str, request_id: UUID) -> str:
         self.calls.append({"system": system, "user": user, "request_id": str(request_id)})
         return self.answer
+
+
+class FailingModel(CapturingModel):
+    async def complete(self, *, system: str, user: str, request_id: UUID) -> str:
+        await super().complete(system=system, user=user, request_id=request_id)
+        raise UpstreamModelError("provider unavailable")
 
 
 def build_service(
@@ -139,6 +145,25 @@ async def test_user_prompt_injection_stops_before_retrieval_and_model() -> None:
         AuditAction.AUTHENTICATE,
         AuditAction.REQUEST_DENY,
     ]
+
+
+async def test_model_failure_records_denied_invocation_without_provider_details() -> None:
+    record = Record(source="cases", fields={"summary": DataField(value="safe")})
+    service, audit_repository = build_service(record, FailingModel())
+
+    with pytest.raises(UpstreamModelError):
+        await service.execute(
+            analyst(), QueryRequest(query="Summarize", record_ids=[record.id])
+        )
+
+    events = next(iter(audit_repository._events.values()))
+    assert [event.action for event in events[-2:]] == [
+        AuditAction.MODEL_INVOKE,
+        AuditAction.REQUEST_DENY,
+    ]
+    assert events[-2].decision == Decision.DENY
+    assert events[-2].details == {"error_code": "upstream_model_error"}
+    assert "provider unavailable" not in json.dumps([event.details for event in events])
 
 
 async def test_injection_inside_retrieved_data_is_quarantined() -> None:
