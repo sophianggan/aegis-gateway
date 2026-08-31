@@ -12,7 +12,13 @@ from aegis.domain.models import (
     QueryRequest,
     QueryResponse,
 )
-from aegis.errors import AegisError, AuthenticationError, RequestLimitError, ResourceNotFoundError
+from aegis.errors import (
+    AegisError,
+    AuthenticationError,
+    PolicyViolationError,
+    RequestLimitError,
+    ResourceNotFoundError,
+)
 from aegis.ports import ModelProvider, RateLimiter, RecordRepository, RevocationStore
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
@@ -136,7 +142,17 @@ class QueryService:
             )
 
             protected = self._protected_values(evaluated)
-            scan = self._output_guard.enforce(answer, protected_values=protected)
+            try:
+                scan = self._output_guard.enforce(answer, protected_values=protected)
+            except PolicyViolationError as exc:
+                await self._audit.record(
+                    request_id=request_id,
+                    actor=principal.subject,
+                    action=AuditAction.OUTPUT_SCAN,
+                    decision=Decision.DENY,
+                    details=exc.details,
+                )
+                raise
             await self._audit.record(
                 request_id=request_id,
                 actor=principal.subject,

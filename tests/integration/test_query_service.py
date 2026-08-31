@@ -14,6 +14,7 @@ from aegis.domain.models import (
     AuditAction,
     Classification,
     DataField,
+    Decision,
     Principal,
     QueryRequest,
     Record,
@@ -108,6 +109,12 @@ async def test_model_leak_is_blocked_and_audited_as_denied() -> None:
         await service.execute(analyst(), QueryRequest(query="Summarize", record_ids=[record.id]))
 
     events = next(iter(audit_repository._events.values()))
+    assert [event.action for event in events[-2:]] == [
+        AuditAction.OUTPUT_SCAN,
+        AuditAction.REQUEST_DENY,
+    ]
+    assert events[-2].decision == Decision.DENY
+    assert events[-2].details == {"finding_count": 1, "kinds": ["protected_value"]}
     assert events[-1].action == AuditAction.REQUEST_DENY
     assert restricted_value not in json.dumps([event.details for event in events])
 
