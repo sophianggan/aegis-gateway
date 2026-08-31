@@ -63,14 +63,19 @@ class Principal(BaseModel):
 
     subject: str = Field(min_length=1, max_length=200)
     clearance: Classification
-    compartments: frozenset[str] = Field(default_factory=frozenset)
-    roles: frozenset[str] = Field(default_factory=frozenset)
-    token_id: str | None = None
+    compartments: frozenset[str] = Field(default_factory=frozenset, max_length=50)
+    roles: frozenset[str] = Field(default_factory=frozenset, max_length=50)
+    token_id: str | None = Field(default=None, min_length=1, max_length=200)
 
     @field_validator("compartments", "roles", mode="before")
     @classmethod
     def normalize_sets(cls, value: Any) -> frozenset[str]:
-        return frozenset(str(item).strip().lower() for item in (value or []) if str(item).strip())
+        normalized = frozenset(
+            str(item).strip().lower() for item in (value or []) if str(item).strip()
+        )
+        if any(len(item) > 64 for item in normalized):
+            raise ValueError("role and compartment names must contain at most 64 characters")
+        return normalized
 
 
 class DataField(BaseModel):
@@ -80,7 +85,7 @@ class DataField(BaseModel):
 
     value: Any
     classification: Classification = Classification.INTERNAL
-    compartments: frozenset[str] = Field(default_factory=frozenset)
+    compartments: frozenset[str] = Field(default_factory=frozenset, max_length=50)
     exportable: bool = True
 
     @field_validator("classification", mode="before")
@@ -91,7 +96,12 @@ class DataField(BaseModel):
     @field_validator("compartments", mode="before")
     @classmethod
     def normalize_compartments(cls, value: Any) -> frozenset[str]:
-        return frozenset(str(item).strip().lower() for item in (value or []) if str(item).strip())
+        normalized = frozenset(
+            str(item).strip().lower() for item in (value or []) if str(item).strip()
+        )
+        if any(len(item) > 64 for item in normalized):
+            raise ValueError("compartment names must contain at most 64 characters")
+        return normalized
 
 
 class Record(BaseModel):

@@ -33,6 +33,10 @@ designed to reveal database-level mutation.
 | Container privilege escalation | Non-root, read-only root, dropped capabilities, seccomp | Container and manifest review |
 | Build artifact is replaced after testing | Wheel, SBOM, image ID, revision, and SHA-256 evidence manifest | Supply-chain CI job |
 
+Signed identity claims are bounded after verification. A principal may carry at most 50
+roles and 50 compartments, each no longer than 64 characters; oversized claims fail
+authentication before policy evaluation.
+
 ## Abuse cases in CI
 
 The red-team corpus includes instruction override, role reassignment, control-token

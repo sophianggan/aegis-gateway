@@ -66,3 +66,16 @@ def test_rejects_token_signed_by_another_key(authenticator: TokenAuthenticator) 
     token = other.issue_development_token(subject="casey", clearance=Classification.INTERNAL)
     with pytest.raises(AuthenticationError):
         authenticator.authenticate(f"Bearer {token}")
+
+
+def test_rejects_oversized_identity_claim_collections(
+    authenticator: TokenAuthenticator,
+) -> None:
+    token = authenticator.issue_development_token(
+        subject="casey",
+        clearance=Classification.INTERNAL,
+        roles={f"role-{index}" for index in range(51)},
+    )
+
+    with pytest.raises(AuthenticationError, match="invalid or expired"):
+        authenticator.authenticate(f"Bearer {token}")
