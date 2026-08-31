@@ -43,6 +43,7 @@ are bounded to 256 characters.
 Set `require_all_records` to `true` when partial analysis is unsafe. Missing records then
 produce `404 resource_not_found` before model invocation. Non-strict responses include
 `missing_record_ids` so callers can distinguish complete answers from partial ones.
+Record identifier lists must be unique for both queries and policy previews.
 
 `POST /v1/query`
 

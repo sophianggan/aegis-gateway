@@ -103,6 +103,21 @@ async def test_query_metadata_is_bounded_and_normalized() -> None:
     assert rejected.status_code == 422
 
 
+async def test_query_rejects_duplicate_record_identifiers() -> None:
+    app, _, token = await configured_app()
+    record_id = str(DEMO_RECORDS[0].id)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/query",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"query": "status", "record_ids": [record_id, record_id]},
+        )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"][-1] == "record_ids"
+
+
 async def test_strict_query_fails_before_model_when_a_record_is_missing() -> None:
     app, _, token = await configured_app()
     missing_id = "99999999-9999-4999-8999-999999999999"

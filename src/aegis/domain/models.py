@@ -131,6 +131,13 @@ class PolicyDecision(BaseModel):
 class PolicyPreviewRequest(BaseModel):
     record_ids: list[UUID] = Field(min_length=1, max_length=100)
 
+    @field_validator("record_ids")
+    @classmethod
+    def reject_duplicate_record_ids(cls, value: list[UUID]) -> list[UUID]:
+        if len(value) != len(set(value)):
+            raise ValueError("record_ids must not contain duplicates")
+        return value
+
 
 class RecordPolicyPreview(BaseModel):
     record_id: UUID
@@ -161,6 +168,13 @@ class QueryRequest(BaseModel):
         if not cleaned:
             raise ValueError("query must not be blank")
         return cleaned
+
+    @field_validator("record_ids")
+    @classmethod
+    def reject_duplicate_record_ids(cls, value: list[UUID]) -> list[UUID]:
+        if len(value) != len(set(value)):
+            raise ValueError("record_ids must not contain duplicates")
+        return value
 
     @field_validator("metadata")
     @classmethod

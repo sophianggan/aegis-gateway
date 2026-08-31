@@ -1,6 +1,16 @@
 from uuid import uuid4
 
-from aegis.domain.models import Classification, DataField, Decision, Principal, Record
+import pytest
+from pydantic import ValidationError
+
+from aegis.domain.models import (
+    Classification,
+    DataField,
+    Decision,
+    PolicyPreviewRequest,
+    Principal,
+    Record,
+)
 from aegis.services.policy import PolicyEngine
 
 
@@ -86,3 +96,10 @@ def test_safe_context_omits_fully_denied_records() -> None:
     assert len(evaluations) == 2
     assert len(context) == 1
     assert context[0]["record_id"] == str(allowed.id)
+
+
+def test_policy_preview_rejects_duplicate_record_identifiers() -> None:
+    record_id = uuid4()
+
+    with pytest.raises(ValidationError, match="must not contain duplicates"):
+        PolicyPreviewRequest(record_ids=[record_id, record_id])
