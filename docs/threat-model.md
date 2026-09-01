@@ -29,6 +29,7 @@ designed to reveal database-level mutation.
 | Error or telemetry leaks payloads | Stable errors and metadata-only structured logs | API contract and audit tests |
 | Audit rows are changed or reordered | Database mutation trigger plus HMAC hash chain | Tampering test |
 | Model endpoint is unavailable or malformed | Strict parsing and no unguarded fallback | Provider adapter tests |
+| Model traffic is intercepted | Production requires HTTPS model URLs without userinfo credentials | Configuration tests |
 | A compromised pod scans the cluster | Default-deny network policy and explicit destinations | Manifest review |
 | Container privilege escalation | Non-root, read-only root, dropped capabilities, seccomp | Container and manifest review |
 | Build artifact is replaced after testing | Wheel, SBOM, image ID, revision, and SHA-256 evidence manifest | Supply-chain CI job |

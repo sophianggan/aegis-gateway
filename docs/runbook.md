@@ -30,6 +30,7 @@ and any sustained increase in egress blocks.
 
 Required secret values are `AEGIS_DATABASE_URL`, `AEGIS_JWT_SECRET`,
 `AEGIS_AUDIT_HMAC_KEY`, and, when applicable, `AEGIS_MODEL_API_KEY`.
+Production `AEGIS_MODEL_BASE_URL` values must use HTTPS and must not embed credentials.
 
 The `/metrics` endpoint contains route templates, status codes, counts, and durations only.
 Scrape it from a protected monitoring network. Alert on sustained `429` responses, any

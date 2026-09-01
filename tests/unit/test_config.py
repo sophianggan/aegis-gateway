@@ -12,6 +12,7 @@ def production_settings(**overrides: object) -> dict[str, object]:
         "jwt_secret": SecretStr("independent-jwt-signing-material-0001"),
         "audit_hmac_key": SecretStr("independent-audit-signing-material-02"),
         "model_provider": "openai-compatible",
+        "model_base_url": "https://model.internal/v1",
     }
     values.update(overrides)
     return values
@@ -40,6 +41,11 @@ def test_accepts_independently_provisioned_production_settings() -> None:
         (
             {"database_url": "postgresql://aegis:aegis@localhost:5432/aegis"},
             "database URL",
+        ),
+        ({"model_base_url": "http://model.internal/v1"}, "model URL must use HTTPS"),
+        (
+            {"model_base_url": "https://user:secret@model.internal/v1"},
+            "without embedded credentials",
         ),
     ],
 )

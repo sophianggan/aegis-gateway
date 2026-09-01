@@ -1,5 +1,6 @@
 from functools import lru_cache
 from typing import Literal, Self
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -68,6 +69,16 @@ class Settings(BaseSettings):
             violations.append("production persistence must use postgres")
         if self.model_provider != "openai-compatible":
             violations.append("production model provider must use an isolated endpoint")
+        model_url = urlsplit(self.model_base_url)
+        if (
+            model_url.scheme != "https"
+            or not model_url.hostname
+            or model_url.username is not None
+            or model_url.password is not None
+        ):
+            violations.append(
+                "production model URL must use HTTPS without embedded credentials"
+            )
         if len(jwt_value) < 32 or "development-only" in jwt_value:
             violations.append("production JWT secret must be independently provisioned")
         if len(audit_value) < 32 or "development-only" in audit_value:
