@@ -1,5 +1,8 @@
 from uuid import UUID
 
+import pytest
+from pydantic import ValidationError
+
 from aegis.domain.models import Classification, DataField, Record
 from aegis.services.record_integrity import RecordIntegrity
 
@@ -45,3 +48,11 @@ def test_digest_is_bound_to_deployment_key() -> None:
     second = RecordIntegrity("second-integrity-key-long-enough").digest(record)
 
     assert first != second
+
+
+def test_record_source_is_canonical_and_never_blank() -> None:
+    record = Record(source="  maintenance-ledger  ", fields={"status": DataField(value="ok")})
+
+    assert record.source == "maintenance-ledger"
+    with pytest.raises(ValidationError, match="source must not be blank"):
+        Record(source="   ", fields={"status": DataField(value="ok")})

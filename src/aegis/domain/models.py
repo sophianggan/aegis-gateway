@@ -21,6 +21,13 @@ def _validate_field_names(fields: dict[str, DataField]) -> dict[str, DataField]:
     return fields
 
 
+def _normalize_source(source: str) -> str:
+    normalized = source.strip()
+    if not normalized:
+        raise ValueError("source must not be blank")
+    return normalized
+
+
 class Classification(IntEnum):
     """Ordered sensitivity labels; a principal may access its level and below."""
 
@@ -112,6 +119,11 @@ class Record(BaseModel):
     fields: dict[str, DataField]
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
+    @field_validator("source")
+    @classmethod
+    def normalize_source(cls, value: str) -> str:
+        return _normalize_source(value)
+
     @field_validator("fields")
     @classmethod
     def validate_field_names(cls, value: dict[str, DataField]) -> dict[str, DataField]:
@@ -122,6 +134,11 @@ class RecordCreate(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     source: str = Field(min_length=1, max_length=100)
     fields: dict[str, DataField] = Field(min_length=1, max_length=200)
+
+    @field_validator("source")
+    @classmethod
+    def normalize_source(cls, value: str) -> str:
+        return _normalize_source(value)
 
     @field_validator("fields")
     @classmethod

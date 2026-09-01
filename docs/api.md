@@ -66,7 +66,8 @@ the names or values of fields the caller could not access.
 
 `POST /v1/records` requires the `data-admin` role. Classification names and numeric values
 are both accepted. Field names are limited to 64 characters, must begin with a letter,
-and may contain only letters, digits, underscores, periods, or hyphens.
+and may contain only letters, digits, underscores, periods, or hyphens. Source labels are
+trimmed and may not be blank.
 
 ```json
 {
