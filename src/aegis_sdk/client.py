@@ -3,10 +3,11 @@ from __future__ import annotations
 import asyncio
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
-from typing import Any
+from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
 from aegis_sdk.models import (
     AuditBundle,
@@ -23,6 +24,7 @@ from aegis_sdk.models import (
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 _CORRELATION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+ResponseModel = TypeVar("ResponseModel", bound=BaseModel)
 
 
 class AegisClientError(Exception):
@@ -30,6 +32,17 @@ class AegisClientError(Exception):
         super().__init__(message)
         self.code = code
         self.status_code = status_code
+
+
+def _validate_response(
+    model: type[ResponseModel], payload: dict[str, Any]
+) -> ResponseModel:
+    try:
+        return model.model_validate(payload)
+    except ValidationError as exc:
+        raise AegisClientError(
+            "gateway returned an invalid response", code="invalid_response"
+        ) from exc
 
 
 class AegisClient:
@@ -82,7 +95,7 @@ class AegisClient:
             },
             correlation_id=correlation_id,
         )
-        return QueryResult.model_validate(response)
+        return _validate_response(QueryResult, response)
 
     async def verify_audit(self, request_id: UUID | str) -> bool:
         response = await self._request("GET", f"/v1/audit/{request_id}/verify")
@@ -94,15 +107,15 @@ class AegisClient:
             "/v1/policy/preview",
             json={"record_ids": [str(item) for item in record_ids]},
         )
-        return PolicyPreview.model_validate(response)
+        return _validate_response(PolicyPreview, response)
 
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
         response = await self._request("GET", f"/v1/audit/{request_id}/export")
-        return AuditBundle.model_validate(response)
+        return _validate_response(AuditBundle, response)
 
     async def create_audit_checkpoint(self, request_id: UUID | str) -> AuditCheckpoint:
         response = await self._request("GET", f"/v1/audit/{request_id}/checkpoint")
-        return AuditCheckpoint.model_validate(response)
+        return _validate_response(AuditCheckpoint, response)
 
     async def list_audit_events(
         self, request_id: UUID | str, *, after_sequence: int = -1, limit: int = 50
@@ -115,7 +128,7 @@ class AegisClient:
             "GET",
             f"/v1/audit/{request_id}/events?after_sequence={after_sequence}&limit={limit}",
         )
-        return AuditPage.model_validate(response)
+        return _validate_response(AuditPage, response)
 
     async def iter_audit_events(
         self, request_id: UUID | str, *, page_size: int = 50
@@ -141,11 +154,11 @@ class AegisClient:
             "/v1/records",
             json=record.model_dump(mode="json"),
         )
-        return RecordReceipt.model_validate(response)
+        return _validate_response(RecordReceipt, response)
 
     async def delete_record(self, record_id: UUID | str) -> RecordDeletionReceipt:
         response = await self._request("DELETE", f"/v1/records/{record_id}")
-        return RecordDeletionReceipt.model_validate(response)
+        return _validate_response(RecordDeletionReceipt, response)
 
     async def revoke_token(
         self, token_id: str, *, reason_code: str = "administrative"
@@ -155,7 +168,7 @@ class AegisClient:
             "/v1/admin/token-revocations",
             json={"token_id": token_id, "reason_code": reason_code},
         )
-        return TokenRevocationReceipt.model_validate(response)
+        return _validate_response(TokenRevocationReceipt, response)
 
     async def create_records(
         self,

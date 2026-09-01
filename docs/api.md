@@ -153,6 +153,8 @@ Static tokens and synchronous or asynchronous token-provider results are trimmed
 validated before transport. A blank credential fails locally with `AegisClientError`.
 Caller-supplied correlation IDs accept 1–128 ASCII letters, digits, periods, underscores,
 or hyphens and are rejected locally if they are not safe for an HTTP header.
+Successful HTTP responses are validated against the typed SDK schema; incompatible JSON
+raises `AegisClientError` with the local code `invalid_response`.
 
 Audit consumers can use `iter_audit_events(request_id, page_size=50)` as an async
 iterator; the SDK follows stable sequence cursors until the complete history is read.
