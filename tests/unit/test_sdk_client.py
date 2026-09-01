@@ -43,6 +43,29 @@ async def test_sdk_converts_transport_failure() -> None:
             await client.query("status")
 
 
+@pytest.mark.parametrize("token", ["", "   "])
+async def test_sdk_rejects_blank_static_token_before_request(token: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("blank credentials must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        token,
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(AegisClientError, match="must not be blank"):
+            await client.query("status")
+
+
+async def test_sdk_rejects_blank_token_provider_result() -> None:
+    async def token_provider() -> str:
+        return " "
+
+    async with AegisClient("https://gateway.internal", token_provider) as client:
+        with pytest.raises(AegisClientError, match="must not be blank"):
+            await client.query("status")
+
+
 @pytest.mark.parametrize(
     ("response", "expected"),
     [

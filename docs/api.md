@@ -144,6 +144,9 @@ Bulk SDK ingestion bounds concurrency between 1 and 32 and preserves input order
 failed request raises `AegisClientError`; callers choose whether to retry the full batch or
 the remaining records.
 
+Static tokens and synchronous or asynchronous token-provider results are trimmed and
+validated before transport. A blank credential fails locally with `AegisClientError`.
+
 Audit consumers can use `iter_audit_events(request_id, page_size=50)` as an async
 iterator; the SDK follows stable sequence cursors until the complete history is read.
 

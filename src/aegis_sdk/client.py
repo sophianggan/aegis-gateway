@@ -172,12 +172,14 @@ class AegisClient:
         return list(await asyncio.gather(*(create(record) for record in records)))
 
     async def _resolve_token(self) -> str:
-        if isinstance(self._token, str):
-            return self._token
-        token = self._token()
-        if isinstance(token, Awaitable):
-            token = await token
-        return token
+        resolved: str | Awaitable[str]
+        resolved = self._token if isinstance(self._token, str) else self._token()
+        if isinstance(resolved, Awaitable):
+            resolved = await resolved
+        normalized = resolved.strip()
+        if not normalized:
+            raise AegisClientError("authentication token must not be blank")
+        return normalized
 
     async def _request(
         self,
