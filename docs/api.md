@@ -68,6 +68,9 @@ the names or values of fields the caller could not access.
 are both accepted. Field names are limited to 64 characters, must begin with a letter,
 and may contain only letters, digits, underscores, periods, or hyphens. Source labels are
 trimmed and may not be blank.
+Serialized records are bounded by `AEGIS_MAX_RECORD_BYTES` (1,000,000 by default).
+Oversized ingestion attempts return `413 request_limit_exceeded` and create a
+payload-free denied upsert event.
 
 ```json
 {

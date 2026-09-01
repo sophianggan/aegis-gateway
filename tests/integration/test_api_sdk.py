@@ -410,6 +410,33 @@ async def test_record_ingestion_rejects_unsafe_field_names() -> None:
     assert response.json()["detail"][0]["loc"][-1] == "fields"
 
 
+async def test_record_ingestion_audits_and_rejects_oversized_payload() -> None:
+    settings = runtime_settings().model_copy(update={"max_record_bytes": 1_024})
+    container = Container.build(settings)
+    token = container.authenticator.issue_development_token(
+        subject="data-steward",
+        clearance=Classification.INTERNAL,
+        roles={"data-admin"},
+    )
+    app = create_app(settings=settings, container=container)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/records",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "source": "large-import",
+                "fields": {"content": {"value": "x" * 2_000, "classification": "PUBLIC"}},
+            },
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["details"] == {"max_record_bytes": 1_024}
+    event = next(iter(container.audit_repository._events.values()))[0]  # type: ignore[attr-defined]
+    assert event.action == "record.upsert"
+    assert event.decision == "deny"
+
+
 async def test_data_admin_retires_record_but_preserves_audit_evidence() -> None:
     app, container, _ = await configured_app()
     token = container.authenticator.issue_development_token(

@@ -26,7 +26,7 @@ from aegis.domain.models import (
     TokenRevocationReceipt,
     TokenRevocationRequest,
 )
-from aegis.errors import AuthenticationError, AuthorizationError
+from aegis.errors import AuthenticationError, AuthorizationError, RequestLimitError
 
 router = APIRouter(prefix="/v1")
 
@@ -144,9 +144,27 @@ async def create_record(
     container: Annotated[Container, Depends(get_container)],
 ) -> RecordReceipt:
     await _enforce_operational_access(principal, container, required_role="data-admin")
+    request_id = uuid4()
+    record_bytes = len(payload.model_dump_json().encode())
+    if record_bytes > container.settings.max_record_bytes:
+        await container.audit.record(
+            request_id=request_id,
+            actor=principal.subject,
+            action=AuditAction.RECORD_UPSERT,
+            decision=Decision.DENY,
+            resource_ids=[str(payload.id)],
+            details={
+                "error_code": RequestLimitError.code,
+                "record_bytes": record_bytes,
+                "max_record_bytes": container.settings.max_record_bytes,
+            },
+        )
+        raise RequestLimitError(
+            "record exceeds the configured payload limit",
+            details={"max_record_bytes": container.settings.max_record_bytes},
+        )
     record = Record(id=payload.id, source=payload.source, fields=payload.fields)
     await container.records.put(record)
-    request_id = uuid4()
     integrity_digest = container.record_integrity.digest(record)
     highest = max(field.classification for field in record.fields.values())
     await container.audit.record(
