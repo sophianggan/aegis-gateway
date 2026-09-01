@@ -66,6 +66,20 @@ async def test_sdk_rejects_blank_token_provider_result() -> None:
             await client.query("status")
 
 
+@pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])
+async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("unsafe correlation IDs must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(AegisClientError, match="header-safe"):
+            await client.query("status", correlation_id=correlation_id)
+
+
 @pytest.mark.parametrize(
     ("response", "expected"),
     [

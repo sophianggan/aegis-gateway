@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any
 from uuid import UUID, uuid4
@@ -21,6 +22,7 @@ from aegis_sdk.models import (
 )
 
 TokenProvider = Callable[[], str | Awaitable[str]]
+_CORRELATION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 
 class AegisClientError(Exception):
@@ -189,9 +191,17 @@ class AegisClient:
         json: dict[str, Any] | None = None,
         correlation_id: str | None = None,
     ) -> dict[str, Any]:
+        if correlation_id is None:
+            request_id = str(uuid4())
+        elif _CORRELATION_ID_PATTERN.fullmatch(correlation_id):
+            request_id = correlation_id
+        else:
+            raise AegisClientError(
+                "correlation_id must contain 1-128 header-safe characters"
+            )
         headers = {
             "Authorization": f"Bearer {await self._resolve_token()}",
-            "X-Request-ID": correlation_id or str(uuid4()),
+            "X-Request-ID": request_id,
         }
         try:
             response = await self._client.request(method, path, json=json, headers=headers)

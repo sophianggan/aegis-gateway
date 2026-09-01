@@ -146,6 +146,8 @@ the remaining records.
 
 Static tokens and synchronous or asynchronous token-provider results are trimmed and
 validated before transport. A blank credential fails locally with `AegisClientError`.
+Caller-supplied correlation IDs accept 1–128 ASCII letters, digits, periods, underscores,
+or hyphens and are rejected locally if they are not safe for an HTTP header.
 
 Audit consumers can use `iter_audit_events(request_id, page_size=50)` as an async
 iterator; the SDK follows stable sequence cursors until the complete history is read.
