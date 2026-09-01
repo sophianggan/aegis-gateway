@@ -115,6 +115,8 @@ These endpoints require the `auditor` role and apply revocation and rate-limit c
 An export fails with `409 audit_integrity_failed` if the stored chain is absent or invalid.
 Auditors holding the separately controlled verification key can validate a bundle offline
 with `AuditTrail.verify_bundle`.
+Evidence schemas accept only `aegis.audit.v1` or `aegis.checkpoint.v1`, as applicable,
+and the `HMAC-SHA256` algorithm identifier. Unknown formats fail schema validation.
 
 ## SDK administration
 

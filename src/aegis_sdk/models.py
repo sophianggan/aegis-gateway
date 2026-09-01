@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -33,7 +33,7 @@ class RecordReceipt(BaseModel):
     record_id: UUID
     field_count: int
     highest_classification: Classification
-    integrity_algorithm: str
+    integrity_algorithm: Literal["HMAC-SHA256"]
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -93,13 +93,13 @@ class AuditEvent(BaseModel):
 
 
 class AuditBundle(BaseModel):
-    version: str
+    version: Literal["aegis.audit.v1"]
     request_id: UUID
     generated_at: datetime
     event_count: int
     chain_head: str
     events: list[AuditEvent]
-    signature_algorithm: str
+    signature_algorithm: Literal["HMAC-SHA256"]
     bundle_signature: str
 
 
@@ -110,10 +110,10 @@ class AuditPage(BaseModel):
 
 
 class AuditCheckpoint(BaseModel):
-    version: str
+    version: Literal["aegis.checkpoint.v1"]
     request_id: UUID
     generated_at: datetime
     event_count: int
     chain_head: str
-    signature_algorithm: str
+    signature_algorithm: Literal["HMAC-SHA256"]
     signature: str

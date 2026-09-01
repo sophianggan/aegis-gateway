@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from enum import IntEnum, StrEnum
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -151,7 +151,7 @@ class RecordReceipt(BaseModel):
     record_id: UUID
     field_count: int
     highest_classification: Classification
-    integrity_algorithm: str = "HMAC-SHA256"
+    integrity_algorithm: Literal["HMAC-SHA256"] = "HMAC-SHA256"
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
@@ -273,13 +273,13 @@ class AuditEvent(BaseModel):
 
 
 class AuditBundle(BaseModel):
-    version: str = "aegis.audit.v1"
+    version: Literal["aegis.audit.v1"] = "aegis.audit.v1"
     request_id: UUID
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event_count: int = Field(ge=1)
     chain_head: str
     events: list[AuditEvent]
-    signature_algorithm: str = "HMAC-SHA256"
+    signature_algorithm: Literal["HMAC-SHA256"] = "HMAC-SHA256"
     bundle_signature: str = ""
 
 
@@ -290,10 +290,10 @@ class AuditPage(BaseModel):
 
 
 class AuditCheckpoint(BaseModel):
-    version: str = "aegis.checkpoint.v1"
+    version: Literal["aegis.checkpoint.v1"] = "aegis.checkpoint.v1"
     request_id: UUID
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     event_count: int = Field(ge=1)
     chain_head: str = Field(pattern=r"^[a-f0-9]{64}$")
-    signature_algorithm: str = "HMAC-SHA256"
+    signature_algorithm: Literal["HMAC-SHA256"] = "HMAC-SHA256"
     signature: str = Field(default="", pattern=r"^$|^[a-f0-9]{64}$")

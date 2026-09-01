@@ -1,9 +1,10 @@
 from uuid import uuid4
 
 import pytest
+from pydantic import ValidationError
 
 from aegis.adapters.memory import InMemoryAuditRepository
-from aegis.domain.models import AuditAction, Decision
+from aegis.domain.models import AuditAction, AuditCheckpoint, Decision
 from aegis.errors import AuditIntegrityError
 from aegis.services.audit import AuditTrail
 
@@ -129,3 +130,13 @@ async def test_checkpoint_rejects_missing_chain() -> None:
     trail = AuditTrail(InMemoryAuditRepository(), "checkpoint-signing-key-long-enough")
     with pytest.raises(AuditIntegrityError):
         await trail.checkpoint(uuid4())
+
+
+def test_checkpoint_schema_rejects_unknown_algorithm() -> None:
+    with pytest.raises(ValidationError, match="HMAC-SHA256"):
+        AuditCheckpoint(
+            request_id=uuid4(),
+            event_count=1,
+            chain_head="0" * 64,
+            signature_algorithm="none",  # type: ignore[arg-type]
+        )
