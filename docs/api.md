@@ -184,9 +184,11 @@ Errors use one envelope:
 }
 ```
 
-Stable codes include `authentication_failed`, `authorization_denied`, `policy_violation`,
-`rate_limit_exceeded`, `audit_integrity_failed`, and `upstream_model_error`. Security
-headers disable caching, MIME sniffing, framing, and referrer forwarding.
+Stable codes include `request_validation_failed`, `request_limit_exceeded`,
+`authentication_failed`, `authorization_denied`, `policy_violation`,
+`rate_limit_exceeded`, `audit_integrity_failed`, and `upstream_model_error`. Validation
+errors report only schema field locations and never echo rejected values. Security headers
+disable caching, MIME sniffing, framing, and referrer forwarding.
 
 ## Metrics
 

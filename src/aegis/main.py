@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 
 from aegis.api.routes import router
@@ -62,6 +63,28 @@ def create_app(*, settings: Settings | None = None, container: Container | None 
         if exc.status_code == 429 and isinstance(retry_after, int):
             headers["Retry-After"] = str(retry_after)
         return JSONResponse(status_code=exc.status_code, content=content, headers=headers)
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        del request
+        fields = sorted(
+            {
+                ".".join("*" if isinstance(part, int) else str(part) for part in error["loc"])
+                for error in exc.errors()
+            }
+        )
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error": {
+                    "code": "request_validation_failed",
+                    "message": "request validation failed",
+                    "details": {"fields": fields},
+                }
+            },
+        )
 
     return app
 

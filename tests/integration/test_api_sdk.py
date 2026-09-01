@@ -115,7 +115,13 @@ async def test_query_rejects_duplicate_record_identifiers() -> None:
         )
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"][-1] == "record_ids"
+    assert response.json() == {
+        "error": {
+            "code": "request_validation_failed",
+            "message": "request validation failed",
+            "details": {"fields": ["body.record_ids"]},
+        }
+    }
 
 
 async def test_query_fails_explicitly_above_configured_record_limit() -> None:
@@ -407,7 +413,8 @@ async def test_record_ingestion_rejects_unsafe_field_names() -> None:
         )
 
     assert response.status_code == 422
-    assert response.json()["detail"][0]["loc"][-1] == "fields"
+    assert response.json()["error"]["details"] == {"fields": ["body.fields"]}
+    assert "../secret" not in response.text
 
 
 async def test_record_ingestion_audits_and_rejects_oversized_payload() -> None:
