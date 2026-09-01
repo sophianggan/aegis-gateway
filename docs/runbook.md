@@ -36,6 +36,9 @@ The `/metrics` endpoint contains route templates, status codes, counts, and dura
 Scrape it from a protected monitoring network. Alert on sustained `429` responses, any
 `409` audit-integrity response, egress blocks, or database-pool saturation.
 
+`AEGIS_MAX_MODEL_RESPONSE_CHARACTERS` bounds output inspection work and defaults to
+32,000 characters. Responses above the limit fail closed as `output_too_large`.
+
 ## Key rotation
 
 ### Identity signing key

@@ -30,6 +30,11 @@ class OutputGuard:
         ("ssn", re.compile(r"(?<!\d)\d{3}-\d{2}-\d{4}(?!\d)")),
     )
 
+    def __init__(self, max_output_characters: int = 32_000) -> None:
+        if max_output_characters < 1:
+            raise ValueError("max_output_characters must be positive")
+        self._max_output_characters = max_output_characters
+
     @staticmethod
     def _fingerprint(value: str) -> str:
         return hashlib.sha256(value.encode()).hexdigest()[:12]
@@ -51,6 +56,12 @@ class OutputGuard:
         return protected
 
     def scan(self, output: str, *, protected_values: list[Any] | None = None) -> OutputScan:
+        if len(output) > self._max_output_characters:
+            finding = LeakFinding(
+                kind="output_too_large",
+                fingerprint=self._fingerprint(str(len(output))),
+            )
+            return OutputScan(safe=False, findings=(finding,))
         findings: list[LeakFinding] = []
         for kind, pattern in self._credential_patterns:
             for match in pattern.finditer(output):

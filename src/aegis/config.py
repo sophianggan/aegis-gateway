@@ -34,6 +34,7 @@ class Settings(BaseSettings):
     max_query_characters: int = Field(default=8_000, ge=1, le=100_000)
     max_context_records: int = Field(default=20, ge=1, le=100)
     max_context_bytes: int = Field(default=64_000, ge=1_024, le=10_000_000)
+    max_model_response_characters: int = Field(default=32_000, ge=1, le=1_000_000)
     allowed_query_purposes: frozenset[str] = frozenset(
         {"analysis", "operations-review", "incident-response"}
     )

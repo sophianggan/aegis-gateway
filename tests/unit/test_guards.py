@@ -56,3 +56,15 @@ def test_output_guard_does_not_return_raw_secret_in_error() -> None:
     with pytest.raises(PolicyViolationError) as captured:
         OutputGuard().enforce("leaked value: red-sparrow", protected_values=["red-sparrow"])
     assert "red-sparrow" not in str(captured.value.details)
+
+
+def test_output_guard_fails_fast_above_response_limit() -> None:
+    guard = OutputGuard(max_output_characters=8)
+
+    with pytest.raises(PolicyViolationError) as captured:
+        guard.enforce("nine-char")
+
+    assert captured.value.details == {
+        "finding_count": 1,
+        "kinds": ["output_too_large"],
+    }
