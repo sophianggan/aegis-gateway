@@ -137,3 +137,17 @@ async def test_audit_iterator_rejects_invalid_page_size_before_request() -> None
     async with AegisClient("https://gateway.internal", "token") as client:
         with pytest.raises(ValueError, match="between 1 and 200"):
             await anext(client.iter_audit_events("request-id", page_size=0))
+
+
+@pytest.mark.parametrize("resource_id", ["not-a-uuid", "../records", ""])
+async def test_sdk_rejects_invalid_path_resource_ids(resource_id: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid resource IDs must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="record_id must be a valid UUID"):
+            await client.delete_record(resource_id)

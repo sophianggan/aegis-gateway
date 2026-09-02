@@ -46,6 +46,13 @@ def _validate_response(
         ) from exc
 
 
+def _format_resource_id(value: UUID | str, *, name: str) -> str:
+    try:
+        return str(UUID(str(value)))
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a valid UUID") from exc
+
+
 class AegisClient:
     """Small async SDK that keeps authentication and error handling consistent."""
 
@@ -111,6 +118,7 @@ class AegisClient:
         return _validate_response(QueryResult, response)
 
     async def verify_audit(self, request_id: UUID | str) -> bool:
+        request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request("GET", f"/v1/audit/{request_id}/verify")
         return bool(response["valid"])
 
@@ -123,10 +131,12 @@ class AegisClient:
         return _validate_response(PolicyPreview, response)
 
     async def export_audit(self, request_id: UUID | str) -> AuditBundle:
+        request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request("GET", f"/v1/audit/{request_id}/export")
         return _validate_response(AuditBundle, response)
 
     async def create_audit_checkpoint(self, request_id: UUID | str) -> AuditCheckpoint:
+        request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request("GET", f"/v1/audit/{request_id}/checkpoint")
         return _validate_response(AuditCheckpoint, response)
 
@@ -137,6 +147,7 @@ class AegisClient:
             raise ValueError("after_sequence must be at least -1")
         if limit < 1 or limit > 200:
             raise ValueError("limit must be between 1 and 200")
+        request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request(
             "GET",
             f"/v1/audit/{request_id}/events?after_sequence={after_sequence}&limit={limit}",
@@ -170,6 +181,7 @@ class AegisClient:
         return _validate_response(RecordReceipt, response)
 
     async def delete_record(self, record_id: UUID | str) -> RecordDeletionReceipt:
+        record_id = _format_resource_id(record_id, name="record_id")
         response = await self._request("DELETE", f"/v1/records/{record_id}")
         return _validate_response(RecordDeletionReceipt, response)
 
