@@ -127,6 +127,18 @@ async def test_sdk_wraps_invalid_typed_gateway_response() -> None:
     assert captured.value.status_code == 0
 
 
+@pytest.mark.parametrize("payload", [{"valid": "false"}, {"valid": 1}, {}])
+async def test_sdk_rejects_invalid_audit_verification(payload: dict[str, object]) -> None:
+    request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload)),
+    ) as client:
+        with pytest.raises(AegisClientError, match="invalid response"):
+            await client.verify_audit(request_id)
+
+
 async def test_bulk_ingestion_validates_concurrency_before_request() -> None:
     async with AegisClient("https://gateway.internal", "token") as client:
         with pytest.raises(ValueError, match="between 1 and 32"):

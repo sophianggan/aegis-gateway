@@ -15,6 +15,7 @@ from aegis_sdk.models import (
     AuditCheckpoint,
     AuditEvent,
     AuditPage,
+    AuditVerification,
     PolicyPreview,
     QueryResult,
     RecordDeletionReceipt,
@@ -120,7 +121,7 @@ class AegisClient:
     async def verify_audit(self, request_id: UUID | str) -> bool:
         request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request("GET", f"/v1/audit/{request_id}/verify")
-        return bool(response["valid"])
+        return _validate_response(AuditVerification, response).valid
 
     async def preview_policy(self, record_ids: Sequence[UUID | str]) -> PolicyPreview:
         response = await self._request(

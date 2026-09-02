@@ -103,6 +103,10 @@ class AuditBundle(BaseModel):
     bundle_signature: str
 
 
+class AuditVerification(BaseModel):
+    valid: bool = Field(strict=True)
+
+
 class AuditPage(BaseModel):
     events: list[AuditEvent]
     next_sequence: int | None
