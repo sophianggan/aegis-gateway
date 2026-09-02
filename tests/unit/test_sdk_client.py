@@ -151,6 +151,24 @@ async def test_audit_iterator_rejects_invalid_page_size_before_request() -> None
             await anext(client.iter_audit_events("request-id", page_size=0))
 
 
+@pytest.mark.parametrize("next_sequence", [None, -1, 0])
+async def test_audit_iterator_rejects_non_progressing_cursor(
+    next_sequence: int | None,
+) -> None:
+    request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    response = httpx.Response(
+        200,
+        json={"events": [], "next_sequence": next_sequence, "has_more": True},
+    )
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(lambda _: response),
+    ) as client:
+        with pytest.raises(AegisClientError, match="invalid audit cursor"):
+            await anext(client.iter_audit_events(request_id))
+
+
 @pytest.mark.parametrize("resource_id", ["not-a-uuid", "../records", ""])
 async def test_sdk_rejects_invalid_path_resource_ids(resource_id: str) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:

@@ -169,7 +169,12 @@ class AegisClient:
                 yield event
             if not page.has_more:
                 return
-            if page.next_sequence is None:
+            if (
+                page.next_sequence is None
+                or page.next_sequence <= after_sequence
+                or not page.events
+                or page.next_sequence != page.events[-1].sequence
+            ):
                 raise AegisClientError("gateway returned an invalid audit cursor")
             after_sequence = page.next_sequence
 
