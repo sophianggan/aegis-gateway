@@ -1,5 +1,6 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
+import jwt
 import pytest
 from pydantic import SecretStr
 
@@ -75,6 +76,41 @@ def test_rejects_oversized_identity_claim_collections(
         subject="casey",
         clearance=Classification.INTERNAL,
         roles={f"role-{index}" for index in range(51)},
+    )
+
+    with pytest.raises(AuthenticationError, match="invalid or expired"):
+        authenticator.authenticate(f"Bearer {token}")
+
+
+@pytest.mark.parametrize(
+    ("claim", "value"),
+    [
+        ("sub", None),
+        ("sub", "   "),
+        ("jti", 123),
+        ("roles", "auditor"),
+        ("roles", ["auditor", 7]),
+        ("compartments", {"operations": True}),
+    ],
+)
+def test_rejects_malformed_identity_claim_types(
+    authenticator: TokenAuthenticator, claim: str, value: object
+) -> None:
+    now = datetime.now(UTC)
+    claims: dict[str, object] = {
+        "sub": "casey",
+        "clearance": "INTERNAL",
+        "jti": "token-1",
+        "iat": now,
+        "exp": now + timedelta(minutes=5),
+        "iss": "aegis.local",
+        "aud": "aegis-gateway",
+    }
+    claims[claim] = value
+    token = jwt.encode(
+        claims,
+        "test-jwt-secret-that-is-long-enough",
+        algorithm="HS256",
     )
 
     with pytest.raises(AuthenticationError, match="invalid or expired"):

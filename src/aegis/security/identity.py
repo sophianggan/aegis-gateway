@@ -42,13 +42,31 @@ class TokenAuthenticator:
 
     @staticmethod
     def _principal_from_claims(claims: dict[str, Any]) -> Principal:
+        subject = TokenAuthenticator._required_text_claim(claims, "sub")
+        token_id = TokenAuthenticator._required_text_claim(claims, "jti")
+        compartments = TokenAuthenticator._string_list_claim(claims, "compartments")
+        roles = TokenAuthenticator._string_list_claim(claims, "roles")
         return Principal(
-            subject=str(claims["sub"]),
+            subject=subject,
             clearance=Classification.parse(claims["clearance"]),
-            compartments=claims.get("compartments", []),
-            roles=claims.get("roles", []),
-            token_id=str(claims["jti"]),
+            compartments=compartments,
+            roles=roles,
+            token_id=token_id,
         )
+
+    @staticmethod
+    def _required_text_claim(claims: dict[str, Any], name: str) -> str:
+        value = claims[name]
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{name} must be a non-empty string")
+        return value.strip()
+
+    @staticmethod
+    def _string_list_claim(claims: dict[str, Any], name: str) -> frozenset[str]:
+        value = claims.get(name, [])
+        if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+            raise TypeError(f"{name} must be an array of strings")
+        return frozenset(value)
 
     def issue_development_token(
         self,
