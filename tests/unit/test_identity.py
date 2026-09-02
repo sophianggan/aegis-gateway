@@ -115,3 +115,23 @@ def test_rejects_malformed_identity_claim_types(
 
     with pytest.raises(AuthenticationError, match="invalid or expired"):
         authenticator.authenticate(f"Bearer {token}")
+
+
+def test_disables_development_token_issuance_in_production() -> None:
+    authenticator = TokenAuthenticator(
+        Settings(
+            environment="production",
+            persistence="postgres",
+            database_url="postgresql://runtime:credential@database.internal/aegis",
+            jwt_secret=SecretStr("production-jwt-secret-that-is-long-enough"),
+            audit_hmac_key=SecretStr("production-audit-key-that-is-long-enough"),
+            model_provider="openai-compatible",
+            model_base_url="https://model.internal/v1",
+        )
+    )
+
+    with pytest.raises(RuntimeError, match="disabled in production"):
+        authenticator.issue_development_token(
+            subject="casey",
+            clearance=Classification.INTERNAL,
+        )

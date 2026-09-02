@@ -19,6 +19,7 @@ class TokenAuthenticator:
         self._secret = settings.jwt_secret.get_secret_value()
         self._issuer = settings.jwt_issuer
         self._audience = settings.jwt_audience
+        self._environment = settings.environment
 
     def authenticate(self, authorization: str | None) -> Principal:
         if not authorization:
@@ -79,6 +80,8 @@ class TokenAuthenticator:
     ) -> str:
         """Issue a local token; callers must never expose this in production APIs."""
 
+        if self._environment == "production":
+            raise RuntimeError("development token issuance is disabled in production")
         now = datetime.now(UTC)
         payload = {
             "sub": subject,
