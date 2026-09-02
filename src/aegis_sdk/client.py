@@ -4,6 +4,7 @@ import asyncio
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any, TypeVar
+from urllib.parse import urlsplit
 from uuid import UUID, uuid4
 
 import httpx
@@ -56,6 +57,18 @@ class AegisClient:
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        parsed_url = urlsplit(base_url)
+        if (
+            parsed_url.scheme not in {"http", "https"}
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            raise ValueError(
+                "base_url must be an HTTP(S) origin without credentials, query, or fragment"
+            )
         self._token = token
         self._client = httpx.AsyncClient(
             base_url=base_url.rstrip("/"),

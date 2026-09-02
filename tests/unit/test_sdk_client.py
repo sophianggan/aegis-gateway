@@ -4,6 +4,21 @@ import pytest
 from aegis_sdk import AegisClient, AegisClientError
 
 
+@pytest.mark.parametrize(
+    "base_url",
+    [
+        "gateway.internal",
+        "ftp://gateway.internal",
+        "https://user:secret@gateway.internal",
+        "https://gateway.internal?tenant=one",
+        "https://gateway.internal#api",
+    ],
+)
+def test_sdk_rejects_unsafe_base_urls(base_url: str) -> None:
+    with pytest.raises(ValueError, match=r"HTTP\(S\) origin"):
+        AegisClient(base_url, "token")
+
+
 async def test_sdk_supports_async_token_provider() -> None:
     async def token_provider() -> str:
         return "fresh-token"
