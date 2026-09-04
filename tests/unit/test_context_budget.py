@@ -1,9 +1,13 @@
+import json
+
 from aegis.services.context_budget import ContextBudget
 
 
 def test_budget_retains_fields_in_deterministic_name_order() -> None:
     context = [{"record_id": "r1", "source": "test", "fields": {"z": "last", "a": "first"}}]
-    full_size = ContextBudget._size({"record_id": "r1", "source": "test", "fields": {"a": "first"}})
+    full_size = ContextBudget._size(
+        [{"record_id": "r1", "source": "test", "fields": {"a": "first"}}]
+    )
     result = ContextBudget(full_size).apply(context)
 
     assert result.records[0]["fields"] == {"a": "first"}
@@ -25,4 +29,21 @@ def test_budget_never_exceeds_configured_serialized_size() -> None:
     ]
     result = ContextBudget(400).apply(context)
     assert result.retained_bytes <= 400
+    assert result.retained_bytes == len(
+        json.dumps(result.records, sort_keys=True, separators=(",", ":")).encode()
+    )
     assert result.filtered_fields > 0
+
+
+def test_budget_accounts_for_array_separators_between_records() -> None:
+    context = [
+        {"record_id": "r1", "source": "test", "fields": {"value": "one"}},
+        {"record_id": "r2", "source": "test", "fields": {"value": "two"}},
+    ]
+    individual_total = sum(ContextBudget._size(item) for item in context)
+
+    result = ContextBudget(individual_total).apply(context)
+
+    assert result.records == [context[0]]
+    assert result.filtered_fields == 1
+    assert result.retained_bytes <= individual_total
