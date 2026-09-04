@@ -38,6 +38,23 @@ def test_round_trips_trusted_identity_claims(authenticator: TokenAuthenticator) 
     assert principal.token_id is not None
 
 
+def test_development_tokens_receive_unique_revocation_identifiers(
+    authenticator: TokenAuthenticator,
+) -> None:
+    first = authenticator.issue_development_token(
+        subject="casey", clearance=Classification.INTERNAL
+    )
+    second = authenticator.issue_development_token(
+        subject="casey", clearance=Classification.INTERNAL
+    )
+
+    first_principal = authenticator.authenticate(f"Bearer {first}")
+    second_principal = authenticator.authenticate(f"Bearer {second}")
+
+    assert first != second
+    assert first_principal.token_id != second_principal.token_id
+
+
 @pytest.mark.parametrize("header", [None, "", "Basic abc", "Bearer", "Token abc"])
 def test_rejects_missing_or_malformed_authorization(
     authenticator: TokenAuthenticator, header: str | None

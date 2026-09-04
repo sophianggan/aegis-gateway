@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from uuid import uuid4
 
 import jwt
 
@@ -88,7 +89,7 @@ class TokenAuthenticator:
             "clearance": clearance.name,
             "compartments": sorted(compartments or set()),
             "roles": sorted(roles or set()),
-            "jti": f"dev-{subject}-{int(now.timestamp())}",
+            "jti": f"dev-{uuid4()}",
             "iat": now,
             "exp": now + lifetime,
             "iss": self._issuer,
