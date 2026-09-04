@@ -50,9 +50,12 @@ class QueryService:
         audit: AuditTrail,
         rate_limiter: RateLimiter | None = None,
         max_records: int = 20,
+        max_query_characters: int = 8_000,
         purpose_policy: PurposePolicy | None = None,
         context_budget: ContextBudget | None = None,
     ) -> None:
+        if max_query_characters < 1:
+            raise ValueError("maximum query characters must be positive")
         self._records = records
         self._model = model
         self._revocations = revocations
@@ -62,6 +65,7 @@ class QueryService:
         self._audit = audit
         self._rate_limiter = rate_limiter or NoopRateLimiter()
         self._max_records = max_records
+        self._max_query_characters = max_query_characters
         self._purpose_policy = purpose_policy or PurposePolicy(frozenset({"analysis"}))
         self._context_budget = context_budget or ContextBudget(64_000)
 
@@ -70,6 +74,11 @@ class QueryService:
         try:
             await self._authorize_token(principal, request_id)
             approved_purpose = self._purpose_policy.enforce(request.purpose)
+            if len(request.query) > self._max_query_characters:
+                raise RequestLimitError(
+                    "query exceeds the configured character limit",
+                    details={"max_query_characters": self._max_query_characters},
+                )
             ingress = self._input_guard.enforce(request.query)
             if len(request.record_ids) > self._max_records:
                 raise RequestLimitError(

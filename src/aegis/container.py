@@ -71,6 +71,7 @@ class Container:
             audit=audit,
             rate_limiter=rate_limiter,
             max_records=settings.max_context_records,
+            max_query_characters=settings.max_query_characters,
             purpose_policy=purpose_policy,
             context_budget=ContextBudget(settings.max_context_bytes),
         )
@@ -132,6 +133,7 @@ class Container:
                 audit=audit,
                 rate_limiter=rate_limiter,
                 max_records=settings.max_context_records,
+                max_query_characters=settings.max_query_characters,
                 purpose_policy=purpose_policy,
                 context_budget=ContextBudget(settings.max_context_bytes),
             ),

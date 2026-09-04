@@ -19,7 +19,12 @@ from aegis.domain.models import (
     QueryRequest,
     Record,
 )
-from aegis.errors import AuthenticationError, PolicyViolationError, UpstreamModelError
+from aegis.errors import (
+    AuthenticationError,
+    PolicyViolationError,
+    RequestLimitError,
+    UpstreamModelError,
+)
 from aegis.security.input_guard import InputGuard
 from aegis.security.output_guard import OutputGuard
 from aegis.services.audit import AuditTrail
@@ -47,6 +52,8 @@ def build_service(
     record: Record,
     model: CapturingModel,
     revocations: InMemoryRevocationStore | None = None,
+    *,
+    max_query_characters: int = 8_000,
 ) -> tuple[QueryService, InMemoryAuditRepository]:
     audit_repository = InMemoryAuditRepository()
     service = QueryService(
@@ -57,8 +64,26 @@ def build_service(
         input_guard=InputGuard(),
         output_guard=OutputGuard(),
         audit=AuditTrail(audit_repository, "integration-audit-key-long-enough"),
+        max_query_characters=max_query_characters,
     )
     return service, audit_repository
+
+
+async def test_configured_query_limit_stops_oversized_input_before_model() -> None:
+    record = Record(source="cases", fields={"summary": DataField(value="safe")})
+    model = CapturingModel()
+    service, audit_repository = build_service(record, model, max_query_characters=8)
+
+    with pytest.raises(RequestLimitError) as captured:
+        await service.execute(analyst(), QueryRequest(query="nine chars"))
+
+    assert captured.value.details == {"max_query_characters": 8}
+    assert model.calls == []
+    events = next(iter(audit_repository._events.values()))
+    assert [event.action for event in events] == [
+        AuditAction.AUTHENTICATE,
+        AuditAction.REQUEST_DENY,
+    ]
 
 
 def analyst(*, identifier: str | None = None) -> Principal:

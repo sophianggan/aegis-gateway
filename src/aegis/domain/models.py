@@ -205,7 +205,7 @@ class PolicyPreviewResponse(BaseModel):
 
 
 class QueryRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=8_000)
+    query: str = Field(min_length=1)
     record_ids: list[UUID] = Field(default_factory=list, max_length=100)
     purpose: str = Field(default="analysis", min_length=1, max_length=200)
     metadata: dict[str, str] = Field(default_factory=dict, max_length=20)
