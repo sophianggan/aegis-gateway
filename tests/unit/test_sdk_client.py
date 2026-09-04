@@ -81,6 +81,22 @@ async def test_sdk_rejects_blank_token_provider_result() -> None:
             await client.query("status")
 
 
+async def test_sdk_rejects_non_string_token_provider_result() -> None:
+    async def token_provider() -> object:
+        return None
+
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid credentials must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        token_provider,  # type: ignore[arg-type]
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(AegisClientError, match="must return a string"):
+            await client.query("status")
+
+
 @pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])
 async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:

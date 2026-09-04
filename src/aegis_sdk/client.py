@@ -222,6 +222,8 @@ class AegisClient:
         resolved = self._token if isinstance(self._token, str) else self._token()
         if isinstance(resolved, Awaitable):
             resolved = await resolved
+        if not isinstance(resolved, str):
+            raise AegisClientError("authentication token provider must return a string")
         normalized = resolved.strip()
         if not normalized:
             raise AegisClientError("authentication token must not be blank")
