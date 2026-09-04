@@ -45,8 +45,10 @@ def test_accepts_independently_provisioned_production_settings() -> None:
         ({"model_base_url": "http://model.internal/v1"}, "model URL must use HTTPS"),
         (
             {"model_base_url": "https://user:secret@model.internal/v1"},
-            "without embedded credentials",
+            "without credentials",
         ),
+        ({"model_base_url": "https://model.internal/v1?key=secret"}, "query"),
+        ({"model_base_url": "https://model.internal/v1#chat"}, "fragment"),
     ],
 )
 def test_rejects_unsafe_production_configuration(override: dict[str, object], message: str) -> None:

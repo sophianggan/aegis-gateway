@@ -77,9 +77,11 @@ class Settings(BaseSettings):
             or not model_url.hostname
             or model_url.username is not None
             or model_url.password is not None
+            or model_url.query
+            or model_url.fragment
         ):
             violations.append(
-                "production model URL must use HTTPS without embedded credentials"
+                "production model URL must use HTTPS without credentials, query, or fragment"
             )
         if len(jwt_value) < 32 or "development-only" in jwt_value:
             violations.append("production JWT secret must be independently provisioned")
