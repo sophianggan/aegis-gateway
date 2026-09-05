@@ -197,3 +197,31 @@ async def test_sdk_rejects_invalid_path_resource_ids(resource_id: str) -> None:
     ) as client:
         with pytest.raises(ValueError, match="record_id must be a valid UUID"):
             await client.delete_record(resource_id)
+
+
+async def test_sdk_rejects_invalid_body_resource_ids_before_request() -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid resource IDs must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="record_id must be a valid UUID"):
+            await client.query("status", record_ids=["not-a-uuid"])
+
+
+async def test_sdk_rejects_duplicate_body_resource_ids_before_request() -> None:
+    record_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("duplicate resource IDs must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="must not contain duplicates"):
+            await client.preview_policy([record_id, record_id])

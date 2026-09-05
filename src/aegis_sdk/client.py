@@ -54,6 +54,13 @@ def _format_resource_id(value: UUID | str, *, name: str) -> str:
         raise ValueError(f"{name} must be a valid UUID") from exc
 
 
+def _format_resource_ids(values: Sequence[UUID | str], *, name: str) -> list[str]:
+    formatted = [_format_resource_id(value, name=name) for value in values]
+    if len(formatted) != len(set(formatted)):
+        raise ValueError(f"{name}s must not contain duplicates")
+    return formatted
+
+
 class AegisClient:
     """Small async SDK that keeps authentication and error handling consistent."""
 
@@ -104,12 +111,13 @@ class AegisClient:
         correlation_id: str | None = None,
         require_all_records: bool = False,
     ) -> QueryResult:
+        formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
         response = await self._request(
             "POST",
             "/v1/query",
             json={
                 "query": question,
-                "record_ids": [str(item) for item in record_ids],
+                "record_ids": formatted_record_ids,
                 "purpose": purpose,
                 "metadata": metadata or {},
                 "require_all_records": require_all_records,
@@ -124,10 +132,11 @@ class AegisClient:
         return _validate_response(AuditVerification, response).valid
 
     async def preview_policy(self, record_ids: Sequence[UUID | str]) -> PolicyPreview:
+        formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
         response = await self._request(
             "POST",
             "/v1/policy/preview",
-            json={"record_ids": [str(item) for item in record_ids]},
+            json={"record_ids": formatted_record_ids},
         )
         return _validate_response(PolicyPreview, response)
 
