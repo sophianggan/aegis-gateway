@@ -67,6 +67,7 @@ class Settings(BaseSettings):
         violations: list[str] = []
         jwt_value = self.jwt_secret.get_secret_value()
         audit_value = self.audit_hmac_key.get_secret_value()
+        database_url = urlsplit(self.database_url)
         if self.persistence != "postgres":
             violations.append("production persistence must use postgres")
         if self.model_provider != "openai-compatible":
@@ -91,6 +92,14 @@ class Settings(BaseSettings):
             violations.append("identity and audit keys must be different")
         if "aegis:aegis@localhost" in self.database_url:
             violations.append("production database URL must be independently provisioned")
+        if (
+            database_url.scheme not in {"postgres", "postgresql"}
+            or not database_url.hostname
+            or database_url.fragment
+        ):
+            violations.append(
+                "production database URL must use PostgreSQL with a network host"
+            )
         if violations:
             raise ValueError("; ".join(violations))
         return self

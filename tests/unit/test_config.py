@@ -42,6 +42,12 @@ def test_accepts_independently_provisioned_production_settings() -> None:
             {"database_url": "postgresql://aegis:aegis@localhost:5432/aegis"},
             "database URL",
         ),
+        ({"database_url": "sqlite:///aegis.db"}, "must use PostgreSQL"),
+        ({"database_url": "postgresql:///aegis"}, "network host"),
+        (
+            {"database_url": "postgresql://runtime:credential@database.internal/aegis#unsafe"},
+            "network host",
+        ),
         ({"model_base_url": "http://model.internal/v1"}, "model URL must use HTTPS"),
         (
             {"model_base_url": "https://user:secret@model.internal/v1"},
