@@ -64,13 +64,41 @@ def test_rejects_missing_or_malformed_authorization(
 
 
 def test_rejects_expired_token(authenticator: TokenAuthenticator) -> None:
-    token = authenticator.issue_development_token(
-        subject="casey",
-        clearance=Classification.INTERNAL,
-        lifetime=timedelta(seconds=-1),
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "sub": "casey",
+            "clearance": "INTERNAL",
+            "jti": "expired-token",
+            "iat": now - timedelta(minutes=2),
+            "exp": now - timedelta(minutes=1),
+            "iss": "aegis.local",
+            "aud": "aegis-gateway",
+        },
+        "test-jwt-secret-that-is-long-enough",
+        algorithm="HS256",
     )
     with pytest.raises(AuthenticationError):
         authenticator.authenticate(f"Bearer {token}")
+
+
+def test_development_token_issuer_rejects_nonpositive_lifetime(
+    authenticator: TokenAuthenticator,
+) -> None:
+    with pytest.raises(ValueError, match="lifetime must be positive"):
+        authenticator.issue_development_token(
+            subject="casey",
+            clearance=Classification.INTERNAL,
+            lifetime=timedelta(0),
+        )
+
+
+def test_development_token_issuer_validates_identity(authenticator: TokenAuthenticator) -> None:
+    with pytest.raises(ValueError):
+        authenticator.issue_development_token(
+            subject="   ",
+            clearance=Classification.INTERNAL,
+        )
 
 
 def test_rejects_token_signed_by_another_key(authenticator: TokenAuthenticator) -> None:
@@ -89,10 +117,20 @@ def test_rejects_token_signed_by_another_key(authenticator: TokenAuthenticator) 
 def test_rejects_oversized_identity_claim_collections(
     authenticator: TokenAuthenticator,
 ) -> None:
-    token = authenticator.issue_development_token(
-        subject="casey",
-        clearance=Classification.INTERNAL,
-        roles={f"role-{index}" for index in range(51)},
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "sub": "casey",
+            "clearance": "INTERNAL",
+            "jti": "oversized-identity",
+            "roles": [f"role-{index}" for index in range(51)],
+            "iat": now,
+            "exp": now + timedelta(minutes=5),
+            "iss": "aegis.local",
+            "aud": "aegis-gateway",
+        },
+        "test-jwt-secret-that-is-long-enough",
+        algorithm="HS256",
     )
 
     with pytest.raises(AuthenticationError, match="invalid or expired"):

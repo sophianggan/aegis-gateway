@@ -83,13 +83,22 @@ class TokenAuthenticator:
 
         if self._environment == "production":
             raise RuntimeError("development token issuance is disabled in production")
+        if lifetime <= timedelta(0):
+            raise ValueError("development token lifetime must be positive")
+        principal = Principal(
+            subject=subject.strip(),
+            clearance=clearance,
+            compartments=frozenset(compartments or set()),
+            roles=frozenset(roles or set()),
+            token_id=f"dev-{uuid4()}",
+        )
         now = datetime.now(UTC)
         payload = {
-            "sub": subject,
-            "clearance": clearance.name,
-            "compartments": sorted(compartments or set()),
-            "roles": sorted(roles or set()),
-            "jti": f"dev-{uuid4()}",
+            "sub": principal.subject,
+            "clearance": principal.clearance.name,
+            "compartments": sorted(principal.compartments),
+            "roles": sorted(principal.roles),
+            "jti": principal.token_id,
             "iat": now,
             "exp": now + lifetime,
             "iss": self._issuer,
