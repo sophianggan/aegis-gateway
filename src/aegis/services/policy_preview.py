@@ -10,6 +10,7 @@ from aegis.domain.models import (
     Principal,
     RecordPolicyPreview,
 )
+from aegis.errors import RequestLimitError
 from aegis.ports import RecordRepository
 from aegis.services.audit import AuditTrail
 from aegis.services.policy import PolicyEngine
@@ -26,6 +27,8 @@ class PolicyPreviewService:
         audit: AuditTrail,
         max_records: int,
     ) -> None:
+        if max_records < 1:
+            raise ValueError("maximum preview records must be positive")
         self._records = records
         self._policy = policy
         self._audit = audit
@@ -35,6 +38,23 @@ class PolicyPreviewService:
         self, principal: Principal, payload: PolicyPreviewRequest
     ) -> PolicyPreviewResponse:
         request_id = uuid4()
+        if len(payload.record_ids) > self._max_records:
+            await self._audit.record(
+                request_id=request_id,
+                actor=principal.subject,
+                action=AuditAction.POLICY_PREVIEW,
+                decision=Decision.DENY,
+                resource_ids=[str(item) for item in payload.record_ids],
+                details={
+                    "error_code": RequestLimitError.code,
+                    "requested": len(payload.record_ids),
+                    "max_records": self._max_records,
+                },
+            )
+            raise RequestLimitError(
+                "policy preview exceeds the configured record limit",
+                details={"max_records": self._max_records},
+            )
         records = await self._records.fetch(payload.record_ids, limit=self._max_records)
         found_ids = {record.id for record in records}
         missing = [item for item in payload.record_ids if item not in found_ids]

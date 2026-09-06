@@ -158,6 +158,34 @@ async def test_query_fails_explicitly_above_configured_record_limit() -> None:
     }
 
 
+async def test_policy_preview_fails_explicitly_above_configured_record_limit() -> None:
+    settings = runtime_settings().model_copy(update={"max_context_records": 1})
+    container = Container.build(settings)
+    token = container.authenticator.issue_development_token(
+        subject="policy-reviewer",
+        clearance=Classification.CONFIDENTIAL,
+        roles={"policy-reviewer"},
+    )
+    app = create_app(settings=settings, container=container)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/v1/policy/preview",
+            headers={"Authorization": f"Bearer {token}"},
+            json={"record_ids": [str(uuid4()), str(uuid4())]},
+        )
+
+    assert response.status_code == 413
+    assert response.json()["error"] == {
+        "code": "request_limit_exceeded",
+        "message": "policy preview exceeds the configured record limit",
+        "details": {"max_records": 1},
+    }
+    event = next(iter(container.audit_repository._events.values()))[0]  # type: ignore[attr-defined]
+    assert event.action == "policy.preview"
+    assert event.decision == "deny"
+
+
 async def test_strict_query_fails_before_model_when_a_record_is_missing() -> None:
     app, _, token = await configured_app()
     missing_id = "99999999-9999-4999-8999-999999999999"
