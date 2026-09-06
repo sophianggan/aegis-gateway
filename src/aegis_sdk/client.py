@@ -26,6 +26,7 @@ from aegis_sdk.models import (
 
 TokenProvider = Callable[[], str | Awaitable[str]]
 _CORRELATION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
+_REVOCATION_REASON_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]{1,49}")
 ResponseModel = TypeVar("ResponseModel", bound=BaseModel)
 
 
@@ -203,10 +204,15 @@ class AegisClient:
     async def revoke_token(
         self, token_id: str, *, reason_code: str = "administrative"
     ) -> TokenRevocationReceipt:
+        normalized_token_id = token_id.strip()
+        if not normalized_token_id or len(normalized_token_id) > 200:
+            raise ValueError("token_id must contain between 1 and 200 characters")
+        if not _REVOCATION_REASON_PATTERN.fullmatch(reason_code):
+            raise ValueError("reason_code must contain 2-50 lowercase letters, digits, or hyphens")
         response = await self._request(
             "POST",
             "/v1/admin/token-revocations",
-            json={"token_id": token_id, "reason_code": reason_code},
+            json={"token_id": normalized_token_id, "reason_code": reason_code},
         )
         return _validate_response(TokenRevocationReceipt, response)
 

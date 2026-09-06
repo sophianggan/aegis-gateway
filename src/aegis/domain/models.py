@@ -165,6 +165,14 @@ class TokenRevocationRequest(BaseModel):
     token_id: str = Field(min_length=1, max_length=200)
     reason_code: str = Field(default="administrative", pattern=r"^[a-z0-9][a-z0-9-]{1,49}$")
 
+    @field_validator("token_id")
+    @classmethod
+    def normalize_token_id(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("token_id must not be blank")
+        return normalized
+
 
 class TokenRevocationReceipt(BaseModel):
     request_id: UUID

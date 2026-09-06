@@ -225,3 +225,26 @@ async def test_sdk_rejects_duplicate_body_resource_ids_before_request() -> None:
     ) as client:
         with pytest.raises(ValueError, match="must not contain duplicates"):
             await client.preview_policy([record_id, record_id])
+
+
+@pytest.mark.parametrize(
+    ("token_id", "reason_code", "message"),
+    [
+        ("   ", "administrative", "token_id"),
+        ("token-1", "bad reason", "reason_code"),
+        ("token-1", "x" * 51, "reason_code"),
+    ],
+)
+async def test_sdk_rejects_invalid_revocation_inputs_before_request(
+    token_id: str, reason_code: str, message: str
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid revocation input must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match=message):
+            await client.revoke_token(token_id, reason_code=reason_code)

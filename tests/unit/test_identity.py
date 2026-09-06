@@ -5,7 +5,7 @@ import pytest
 from pydantic import SecretStr
 
 from aegis.config import Settings
-from aegis.domain.models import Classification
+from aegis.domain.models import Classification, TokenRevocationRequest
 from aegis.errors import AuthenticationError
 from aegis.security.identity import TokenAuthenticator
 
@@ -99,6 +99,18 @@ def test_development_token_issuer_validates_identity(authenticator: TokenAuthent
             subject="   ",
             clearance=Classification.INTERNAL,
         )
+
+
+def test_token_revocation_request_normalizes_identifier() -> None:
+    identifier = " target-token "
+    request = TokenRevocationRequest(**{"token_id": identifier})
+    assert request.token_id == identifier.strip()
+
+
+def test_token_revocation_request_rejects_blank_identifier() -> None:
+    identifier = "   "
+    with pytest.raises(ValueError, match="must not be blank"):
+        TokenRevocationRequest(**{"token_id": identifier})
 
 
 def test_rejects_token_signed_by_another_key(authenticator: TokenAuthenticator) -> None:
