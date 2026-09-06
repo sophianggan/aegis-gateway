@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     database_pool_min_size: int = Field(default=1, ge=1, le=20)
     database_pool_max_size: int = Field(default=10, ge=1, le=100)
     jwt_secret: SecretStr = Field(default=SecretStr("development-only-secret-change-me"))
-    jwt_issuer: str = "aegis.local"
-    jwt_audience: str = "aegis-gateway"
+    jwt_issuer: str = Field(default="aegis.local", min_length=1, max_length=200)
+    jwt_audience: str = Field(default="aegis-gateway", min_length=1, max_length=200)
     audit_hmac_key: SecretStr = Field(default=SecretStr("development-only-audit-key-change"))
     model_provider: Literal["deterministic", "openai-compatible"] = "deterministic"
     model_base_url: str = "http://localhost:11434/v1"
@@ -54,6 +54,14 @@ class Settings(BaseSettings):
                 str(item).strip().lower().replace(" ", "-") for item in value if str(item).strip()
             )
         return value
+
+    @field_validator("jwt_issuer", "jwt_audience")
+    @classmethod
+    def normalize_identity_namespaces(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("JWT issuer and audience must not be blank")
+        return normalized
 
     @model_validator(mode="after")
     def validate_runtime_safety(self) -> Self:

@@ -81,3 +81,15 @@ def test_normalizes_comma_separated_query_purposes() -> None:
 def test_rejects_empty_query_purpose_policy() -> None:
     with pytest.raises(ValidationError, match="at least one query purpose"):
         Settings(allowed_query_purposes=[])
+
+
+@pytest.mark.parametrize("field", ["jwt_issuer", "jwt_audience"])
+def test_rejects_blank_identity_namespaces(field: str) -> None:
+    with pytest.raises(ValidationError, match="must not be blank"):
+        Settings(**{field: "   "})
+
+
+def test_normalizes_identity_namespaces() -> None:
+    settings = Settings(jwt_issuer=" issuer.internal ", jwt_audience=" gateway ")
+    assert settings.jwt_issuer == "issuer.internal"
+    assert settings.jwt_audience == "gateway"
