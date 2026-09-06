@@ -140,3 +140,20 @@ def test_checkpoint_schema_rejects_unknown_algorithm() -> None:
             chain_head="0" * 64,
             signature_algorithm="none",  # type: ignore[arg-type]
         )
+
+
+@pytest.mark.parametrize(
+    ("after_sequence", "limit", "message"),
+    [
+        (-2, 50, "after_sequence must be at least -1"),
+        (-1, 0, "limit must be between 1 and 200"),
+        (-1, 201, "limit must be between 1 and 200"),
+    ],
+)
+async def test_audit_page_rejects_invalid_bounds(
+    after_sequence: int, limit: int, message: str
+) -> None:
+    trail = AuditTrail(InMemoryAuditRepository(), "audit-test-key-that-is-long")
+
+    with pytest.raises(ValueError, match=message):
+        await trail.page(uuid4(), after_sequence=after_sequence, limit=limit)
