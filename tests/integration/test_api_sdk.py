@@ -84,6 +84,22 @@ async def test_api_uses_stable_error_envelope() -> None:
     }
 
 
+async def test_api_only_reflects_header_safe_request_identifiers() -> None:
+    app, _, _ = await configured_app()
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        accepted = await client.get(
+            "/v1/health/live", headers={"X-Request-ID": "trace.safe-123"}
+        )
+        replaced = await client.get(
+            "/v1/health/live", headers={"X-Request-ID": "unsafe request id"}
+        )
+
+    assert accepted.headers["X-Request-ID"] == "trace.safe-123"
+    assert replaced.headers["X-Request-ID"] != "unsafe request id"
+    UUID(replaced.headers["X-Request-ID"])
+
+
 async def test_query_metadata_is_bounded_and_normalized() -> None:
     app, _, token = await configured_app()
     transport = httpx.ASGITransport(app=app)

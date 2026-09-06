@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import time
 from uuid import uuid4
@@ -8,6 +9,8 @@ from uuid import uuid4
 import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+
+_REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 
 def configure_logging(level: str) -> None:
@@ -28,7 +31,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     """Add correlation and security headers while logging metadata only."""
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        request_id = request.headers.get("X-Request-ID", str(uuid4()))[:128]
+        supplied_request_id = request.headers.get("X-Request-ID")
+        request_id = (
+            supplied_request_id
+            if supplied_request_id and _REQUEST_ID_PATTERN.fullmatch(supplied_request_id)
+            else str(uuid4())
+        )
         request.state.correlation_id = request_id
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(correlation_id=request_id)
