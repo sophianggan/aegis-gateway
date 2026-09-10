@@ -68,7 +68,7 @@ class InputGuard:
     )
 
     def inspect(self, text: str) -> GuardResult:
-        normalized = unicodedata.normalize("NFKC", text)
+        normalized = " ".join(unicodedata.normalize("NFKC", text).split())
         findings = tuple(
             GuardFinding(rule=name, severity=severity)
             for name, severity, pattern in self._rules
