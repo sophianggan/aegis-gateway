@@ -7,9 +7,10 @@ class PurposePolicy:
     """Normalize and enforce deployment-approved data-use purposes."""
 
     def __init__(self, allowed_purposes: frozenset[str]) -> None:
-        if not allowed_purposes:
+        normalized = frozenset(self.normalize(purpose) for purpose in allowed_purposes)
+        if not normalized or "" in normalized:
             raise ValueError("purpose policy requires at least one allowed purpose")
-        self._allowed = allowed_purposes
+        self._allowed = normalized
 
     @staticmethod
     def normalize(purpose: str) -> str:
