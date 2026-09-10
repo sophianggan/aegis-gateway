@@ -116,12 +116,14 @@ class AegisClient:
         correlation_id: str | None = None,
         require_all_records: bool = False,
     ) -> QueryResult:
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError("question must be a non-blank string")
         formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
         response = await self._request(
             "POST",
             "/v1/query",
             json={
-                "query": question,
+                "query": question.strip(),
                 "record_ids": formatted_record_ids,
                 "purpose": purpose,
                 "metadata": metadata or {},

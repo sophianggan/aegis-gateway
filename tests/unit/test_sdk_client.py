@@ -106,6 +106,20 @@ async def test_sdk_rejects_non_string_token_provider_result() -> None:
             await client.query("status")
 
 
+@pytest.mark.parametrize("question", ["", "   ", "\r\n\t"])
+async def test_sdk_rejects_blank_questions_before_request(question: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("blank questions must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="non-blank"):
+            await client.query(question)
+
+
 @pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])
 async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:
