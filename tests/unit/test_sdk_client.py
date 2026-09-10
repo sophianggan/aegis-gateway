@@ -12,6 +12,7 @@ from aegis_sdk import AegisClient, AegisClientError
         "gateway.internal",
         "ftp://gateway.internal",
         "https://user:secret@gateway.internal",
+        "https://gateway.internal/prefix",
         "https://gateway.internal?tenant=one",
         "https://gateway.internal#api",
     ],

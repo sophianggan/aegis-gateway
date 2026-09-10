@@ -82,11 +82,12 @@ class AegisClient:
             or not parsed_url.hostname
             or parsed_url.username is not None
             or parsed_url.password is not None
+            or parsed_url.path not in {"", "/"}
             or parsed_url.query
             or parsed_url.fragment
         ):
             raise ValueError(
-                "base_url must be an HTTP(S) origin without credentials, query, or fragment"
+                "base_url must be an HTTP(S) origin without credentials, path, query, or fragment"
             )
         self._token = token
         self._client = httpx.AsyncClient(
