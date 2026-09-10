@@ -1,3 +1,5 @@
+import math
+
 import httpx
 import pytest
 
@@ -17,6 +19,12 @@ from aegis_sdk import AegisClient, AegisClientError
 def test_sdk_rejects_unsafe_base_urls(base_url: str) -> None:
     with pytest.raises(ValueError, match=r"HTTP\(S\) origin"):
         AegisClient(base_url, "token")
+
+
+@pytest.mark.parametrize("timeout", [0, -1, 301, math.nan, math.inf])
+def test_sdk_rejects_invalid_timeouts(timeout: float) -> None:
+    with pytest.raises(ValueError, match="between 0 and 300"):
+        AegisClient("https://gateway.internal", "token", timeout=timeout)
 
 
 async def test_sdk_supports_async_token_provider() -> None:

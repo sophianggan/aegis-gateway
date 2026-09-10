@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 import re
 from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 from typing import Any, TypeVar
@@ -73,6 +74,8 @@ class AegisClient:
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
+        if not math.isfinite(timeout) or timeout <= 0 or timeout > 300:
+            raise ValueError("timeout must be finite and between 0 and 300 seconds")
         parsed_url = urlsplit(base_url)
         if (
             parsed_url.scheme not in {"http", "https"}
