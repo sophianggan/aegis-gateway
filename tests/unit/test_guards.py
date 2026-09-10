@@ -78,6 +78,16 @@ def test_output_guard_matches_protected_values_case_insensitively() -> None:
     assert result.findings[0].kind == "protected_value"
 
 
+def test_output_guard_protects_nested_mapping_keys() -> None:
+    result = OutputGuard().scan(
+        "The protected label is launch-code.",
+        protected_values=[{"outer": {"launch-code": "classified"}}],
+    )
+
+    assert not result.safe
+    assert {finding.kind for finding in result.findings} == {"protected_value"}
+
+
 def test_output_guard_does_not_return_raw_secret_in_error() -> None:
     with pytest.raises(PolicyViolationError) as captured:
         OutputGuard().enforce("leaked value: red-sparrow", protected_values=["red-sparrow"])

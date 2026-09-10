@@ -46,6 +46,7 @@ class OutputGuard:
         while stack:
             value = stack.pop()
             if isinstance(value, dict):
+                stack.extend(value.keys())
                 stack.extend(value.values())
             elif isinstance(value, (list, tuple, set, frozenset)):
                 stack.extend(value)
