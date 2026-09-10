@@ -251,6 +251,31 @@ async def test_sdk_rejects_duplicate_body_resource_ids_before_request() -> None:
 
 
 @pytest.mark.parametrize(
+    ("operation", "record_ids", "expected"),
+    [
+        ("query", [f"00000000-0000-4000-8000-{index:012d}" for index in range(101)], "0 and 100"),
+        ("preview", [], "1 and 100"),
+    ],
+)
+async def test_sdk_enforces_record_selection_limits_before_request(
+    operation: str, record_ids: list[str], expected: str
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid record selections must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match=expected):
+            if operation == "query":
+                await client.query("status", record_ids=record_ids)
+            else:
+                await client.preview_policy(record_ids)
+
+
+@pytest.mark.parametrize(
     ("token_id", "reason_code", "message"),
     [
         ("   ", "administrative", "token_id"),

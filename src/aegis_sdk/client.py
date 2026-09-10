@@ -38,9 +38,7 @@ class AegisClientError(Exception):
         self.status_code = status_code
 
 
-def _validate_response(
-    model: type[ResponseModel], payload: dict[str, Any]
-) -> ResponseModel:
+def _validate_response(model: type[ResponseModel], payload: dict[str, Any]) -> ResponseModel:
     try:
         return model.model_validate(payload)
     except ValidationError as exc:
@@ -56,7 +54,15 @@ def _format_resource_id(value: UUID | str, *, name: str) -> str:
         raise ValueError(f"{name} must be a valid UUID") from exc
 
 
-def _format_resource_ids(values: Sequence[UUID | str], *, name: str) -> list[str]:
+def _format_resource_ids(
+    values: Sequence[UUID | str],
+    *,
+    name: str,
+    minimum: int = 0,
+    maximum: int = 100,
+) -> list[str]:
+    if len(values) < minimum or len(values) > maximum:
+        raise ValueError(f"{name}s must contain between {minimum} and {maximum} items")
     formatted = [_format_resource_id(value, name=name) for value in values]
     if len(formatted) != len(set(formatted)):
         raise ValueError(f"{name}s must not contain duplicates")
@@ -139,7 +145,7 @@ class AegisClient:
         return _validate_response(AuditVerification, response).valid
 
     async def preview_policy(self, record_ids: Sequence[UUID | str]) -> PolicyPreview:
-        formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
+        formatted_record_ids = _format_resource_ids(record_ids, name="record_id", minimum=1)
         response = await self._request(
             "POST",
             "/v1/policy/preview",
@@ -263,9 +269,7 @@ class AegisClient:
         elif _CORRELATION_ID_PATTERN.fullmatch(correlation_id):
             request_id = correlation_id
         else:
-            raise AegisClientError(
-                "correlation_id must contain 1-128 header-safe characters"
-            )
+            raise AegisClientError("correlation_id must contain 1-128 header-safe characters")
         headers = {
             "Authorization": f"Bearer {await self._resolve_token()}",
             "X-Request-ID": request_id,
