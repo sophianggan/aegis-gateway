@@ -17,6 +17,8 @@ class MetricsRegistry:
         self._lock = Lock()
 
     def observe_http(self, *, method: str, route: str, status: int, duration: float) -> None:
+        if not math.isfinite(duration) or duration < 0:
+            raise ValueError("HTTP metric duration must be finite and non-negative")
         normalized_method = method.upper()[:12]
         normalized_route = route if route.startswith("/") else "unmatched"
         key = (normalized_method, normalized_route)

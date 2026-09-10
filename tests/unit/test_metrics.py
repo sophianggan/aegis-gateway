@@ -1,3 +1,7 @@
+import math
+
+import pytest
+
 from aegis.services.metrics import MetricsRegistry
 
 
@@ -28,3 +32,13 @@ def test_escapes_label_values_and_bounds_method_cardinality() -> None:
     assert "UNEXPECTED-M" in output
     assert '\\nroute\\"' in output
     assert 'route="unmatched"' not in output
+
+
+@pytest.mark.parametrize("duration", [-0.001, math.nan, math.inf, -math.inf])
+def test_rejects_invalid_durations(duration: float) -> None:
+    registry = MetricsRegistry()
+
+    with pytest.raises(ValueError, match="finite and non-negative"):
+        registry.observe_http(method="GET", route="/health", status=200, duration=duration)
+
+    assert 'method="GET"' not in registry.render()
