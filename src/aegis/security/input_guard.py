@@ -68,11 +68,22 @@ class InputGuard:
     )
 
     def inspect(self, text: str) -> GuardResult:
-        normalized = " ".join(unicodedata.normalize("NFKC", text).split())
+        canonical = unicodedata.normalize("NFKC", text)
+        without_formatting = "".join(
+            character for character in canonical if unicodedata.category(character) != "Cf"
+        )
+        formatting_as_space = "".join(
+            " " if unicodedata.category(character) == "Cf" else character
+            for character in canonical
+        )
+        variants = {
+            " ".join(candidate.split())
+            for candidate in (canonical, without_formatting, formatting_as_space)
+        }
         findings = tuple(
             GuardFinding(rule=name, severity=severity)
             for name, severity, pattern in self._rules
-            if pattern.search(normalized)
+            if any(pattern.search(candidate) for candidate in variants)
         )
         safe = not any(finding.severity == Severity.HIGH for finding in findings)
         return GuardResult(safe=safe, findings=findings)
