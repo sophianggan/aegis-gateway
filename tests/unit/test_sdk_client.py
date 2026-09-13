@@ -157,6 +157,54 @@ async def test_sdk_trims_query_purpose_before_request() -> None:
         await client.query("status", purpose="  incident response  ")
 
 
+@pytest.mark.parametrize(
+    ("metadata", "message"),
+    [
+        ({f"key-{index}": "value" for index in range(21)}, "at most 20"),
+        ({"   ": "value"}, "metadata keys"),
+        ({"x" * 65: "value"}, "metadata keys"),
+        ({"key": "x" * 257}, "metadata values"),
+        ({" Region ": "east", "region": "west"}, "unique after normalization"),
+        ({"key": 1}, "must be strings"),
+    ],
+)
+async def test_sdk_rejects_invalid_query_metadata_before_request(
+    metadata: dict[str, str], message: str
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid metadata must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match=message):
+            await client.query("status", metadata=metadata)
+
+
+async def test_sdk_normalizes_query_metadata_before_request() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["metadata"] == {"region": "east"}
+        return httpx.Response(
+            200,
+            json={
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "answer": "ok",
+                "citations": [],
+                "filtered_field_count": 0,
+                "policy_summary": "passed",
+            },
+        )
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        await client.query("status", metadata={" Region ": " east "})
+
+
 @pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])
 async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:

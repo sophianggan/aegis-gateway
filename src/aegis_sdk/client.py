@@ -69,6 +69,27 @@ def _format_resource_ids(
     return formatted
 
 
+def _normalize_metadata(metadata: dict[str, str] | None) -> dict[str, str]:
+    if metadata is None:
+        return {}
+    if not isinstance(metadata, dict) or len(metadata) > 20:
+        raise ValueError("metadata must be a mapping with at most 20 entries")
+    normalized: dict[str, str] = {}
+    for key, value in metadata.items():
+        if not isinstance(key, str) or not isinstance(value, str):
+            raise ValueError("metadata keys and values must be strings")
+        clean_key = key.strip().lower()
+        clean_value = value.strip()
+        if not clean_key or len(clean_key) > 64:
+            raise ValueError("metadata keys must contain between 1 and 64 characters")
+        if len(clean_value) > 256:
+            raise ValueError("metadata values must contain at most 256 characters")
+        if clean_key in normalized:
+            raise ValueError("metadata keys must be unique after normalization")
+        normalized[clean_key] = clean_value
+    return normalized
+
+
 class AegisClient:
     """Small async SDK that keeps authentication and error handling consistent."""
 
@@ -127,6 +148,7 @@ class AegisClient:
         if not isinstance(purpose, str) or not purpose.strip() or len(purpose.strip()) > 200:
             raise ValueError("purpose must contain between 1 and 200 characters")
         formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
+        normalized_metadata = _normalize_metadata(metadata)
         response = await self._request(
             "POST",
             "/v1/query",
@@ -134,7 +156,7 @@ class AegisClient:
                 "query": question.strip(),
                 "record_ids": formatted_record_ids,
                 "purpose": purpose.strip(),
-                "metadata": metadata or {},
+                "metadata": normalized_metadata,
                 "require_all_records": require_all_records,
             },
             correlation_id=correlation_id,
