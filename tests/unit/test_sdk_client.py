@@ -1,3 +1,4 @@
+import json
 import math
 
 import httpx
@@ -118,6 +119,42 @@ async def test_sdk_rejects_blank_questions_before_request(question: str) -> None
     ) as client:
         with pytest.raises(ValueError, match="non-blank"):
             await client.query(question)
+
+
+@pytest.mark.parametrize("purpose", ["", "   ", "x" * 201])
+async def test_sdk_rejects_invalid_query_purpose_before_request(purpose: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid purposes must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="purpose must contain between 1 and 200"):
+            await client.query("status", purpose=purpose)
+
+
+async def test_sdk_trims_query_purpose_before_request() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert json.loads(request.content)["purpose"] == "incident response"
+        return httpx.Response(
+            200,
+            json={
+                "request_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                "answer": "ok",
+                "citations": [],
+                "filtered_field_count": 0,
+                "policy_summary": "passed",
+            },
+        )
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(handler),
+    ) as client:
+        await client.query("status", purpose="  incident response  ")
 
 
 @pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])

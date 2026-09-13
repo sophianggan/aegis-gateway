@@ -124,6 +124,8 @@ class AegisClient:
     ) -> QueryResult:
         if not isinstance(question, str) or not question.strip():
             raise ValueError("question must be a non-blank string")
+        if not isinstance(purpose, str) or not purpose.strip() or len(purpose.strip()) > 200:
+            raise ValueError("purpose must contain between 1 and 200 characters")
         formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
         response = await self._request(
             "POST",
@@ -131,7 +133,7 @@ class AegisClient:
             json={
                 "query": question.strip(),
                 "record_ids": formatted_record_ids,
-                "purpose": purpose,
+                "purpose": purpose.strip(),
                 "metadata": metadata or {},
                 "require_all_records": require_all_records,
             },
