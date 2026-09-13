@@ -5,7 +5,7 @@ from enum import IntEnum
 from typing import Any, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Classification(IntEnum):
@@ -18,14 +18,50 @@ class Classification(IntEnum):
 class ClassifiedValue(BaseModel):
     value: Any
     classification: Classification = Classification.INTERNAL
-    compartments: set[str] = Field(default_factory=set)
+    compartments: set[str] = Field(default_factory=set, max_length=50)
     exportable: bool = True
+
+    @field_validator("compartments", mode="before")
+    @classmethod
+    def normalize_compartments(cls, value: Any) -> Any:
+        if value is None:
+            return set()
+        if not isinstance(value, (list, tuple, set, frozenset)):
+            return value
+        normalized = {str(item).strip().lower() for item in value if str(item).strip()}
+        if any(len(item) > 64 for item in normalized):
+            raise ValueError("compartment names must contain at most 64 characters")
+        return normalized
 
 
 class RecordInput(BaseModel):
     id: UUID = Field(default_factory=uuid4)
     source: str = Field(min_length=1, max_length=100)
     fields: dict[str, ClassifiedValue] = Field(min_length=1, max_length=200)
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def normalize_source(cls, value: Any) -> Any:
+        if not isinstance(value, str):
+            return value
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("source must not be blank")
+        return normalized
+
+    @field_validator("fields")
+    @classmethod
+    def validate_field_names(cls, value: dict[str, ClassifiedValue]) -> dict[str, ClassifiedValue]:
+        for name in value:
+            if not name or len(name) > 64:
+                raise ValueError("field names must contain between 1 and 64 characters")
+            if not name[0].isalpha() or any(
+                not (character.isalnum() or character in "_.-") for character in name
+            ):
+                raise ValueError(
+                    "field names must start with a letter and use letters, digits, _, ., or -"
+                )
+        return value
 
 
 class RecordReceipt(BaseModel):
