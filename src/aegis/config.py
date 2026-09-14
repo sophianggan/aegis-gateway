@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     environment: Literal["development", "test", "production"] = "development"
-    log_level: str = "INFO"
+    log_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"
     database_url: str = "postgresql://aegis:aegis@localhost:5432/aegis"
     persistence: Literal["memory", "postgres"] = "memory"
     database_pool_min_size: int = Field(default=1, ge=1, le=20)
@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     rate_limit_burst: int = Field(default=10, ge=1, le=10_000)
     rate_limit_max_identities: int = Field(default=10_000, ge=100, le=1_000_000)
     metrics_enabled: bool = True
+
+    @field_validator("log_level", mode="before")
+    @classmethod
+    def normalize_log_level(cls, value: object) -> object:
+        return value.strip().upper() if isinstance(value, str) else value
 
     @field_validator("allowed_query_purposes", mode="before")
     @classmethod

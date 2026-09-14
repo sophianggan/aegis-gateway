@@ -73,6 +73,17 @@ def test_development_keeps_zero_infrastructure_defaults() -> None:
     assert settings.persistence == "memory"
 
 
+def test_normalizes_configured_log_level() -> None:
+    settings = Settings(log_level=" warning ")  # type: ignore[arg-type]
+    assert settings.log_level == "WARNING"
+
+
+@pytest.mark.parametrize("log_level", ["", "verbose", 20])
+def test_rejects_invalid_configured_log_level(log_level: object) -> None:
+    with pytest.raises(ValidationError, match="log_level"):
+        Settings(log_level=log_level)  # type: ignore[arg-type]
+
+
 def test_normalizes_comma_separated_query_purposes() -> None:
     settings = Settings(allowed_query_purposes="Analysis, Incident Response")  # type: ignore[arg-type]
     assert settings.allowed_query_purposes == {"analysis", "incident-response"}
