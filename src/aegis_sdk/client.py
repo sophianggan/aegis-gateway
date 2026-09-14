@@ -118,7 +118,13 @@ class AegisClient:
         timeout: float = 30.0,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        if not math.isfinite(timeout) or timeout <= 0 or timeout > 300:
+        if (
+            isinstance(timeout, bool)
+            or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+            or timeout > 300
+        ):
             raise ValueError("timeout must be finite and between 0 and 300 seconds")
         parsed_url = urlsplit(base_url)
         if (
@@ -207,9 +213,11 @@ class AegisClient:
     async def list_audit_events(
         self, request_id: UUID | str, *, after_sequence: int = -1, limit: int = 50
     ) -> AuditPage:
+        if isinstance(after_sequence, bool) or not isinstance(after_sequence, int):
+            raise ValueError("after_sequence must be an integer at least -1")
         if after_sequence < -1:
             raise ValueError("after_sequence must be at least -1")
-        if limit < 1 or limit > 200:
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1 or limit > 200:
             raise ValueError("limit must be between 1 and 200")
         request_id = _format_resource_id(request_id, name="request_id")
         response = await self._request(
@@ -280,7 +288,12 @@ class AegisClient:
         *,
         concurrency: int = 4,
     ) -> list[RecordReceipt]:
-        if concurrency < 1 or concurrency > 32:
+        if (
+            isinstance(concurrency, bool)
+            or not isinstance(concurrency, int)
+            or concurrency < 1
+            or concurrency > 32
+        ):
             raise ValueError("concurrency must be between 1 and 32")
         if any(not isinstance(record, RecordInput) for record in records):
             raise ValueError("records must contain only RecordInput instances")

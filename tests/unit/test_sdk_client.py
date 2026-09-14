@@ -23,7 +23,7 @@ def test_sdk_rejects_unsafe_base_urls(base_url: str) -> None:
         AegisClient(base_url, "token")
 
 
-@pytest.mark.parametrize("timeout", [0, -1, 301, math.nan, math.inf])
+@pytest.mark.parametrize("timeout", [0, -1, 301, math.nan, math.inf, True, "30"])
 def test_sdk_rejects_invalid_timeouts(timeout: float) -> None:
     with pytest.raises(ValueError, match="between 0 and 300"):
         AegisClient("https://gateway.internal", "token", timeout=timeout)
@@ -269,6 +269,13 @@ async def test_bulk_ingestion_validates_concurrency_before_request() -> None:
             await client.create_records([], concurrency=0)
 
 
+@pytest.mark.parametrize("concurrency", [True, 1.5, "4"])
+async def test_bulk_ingestion_rejects_non_integer_concurrency(concurrency: int) -> None:
+    async with AegisClient("https://gateway.internal", "token") as client:
+        with pytest.raises(ValueError, match="between 1 and 32"):
+            await client.create_records([], concurrency=concurrency)
+
+
 async def test_bulk_ingestion_rejects_duplicate_records_before_request() -> None:
     record = RecordInput(source="work-orders", fields={"status": ClassifiedValue(value="open")})
 
@@ -301,6 +308,27 @@ async def test_audit_iterator_rejects_invalid_page_size_before_request() -> None
     async with AegisClient("https://gateway.internal", "token") as client:
         with pytest.raises(ValueError, match="between 1 and 200"):
             await anext(client.iter_audit_events("request-id", page_size=0))
+
+
+@pytest.mark.parametrize(
+    ("parameter", "value", "message"),
+    [
+        ("after_sequence", True, "integer at least -1"),
+        ("after_sequence", 1.5, "integer at least -1"),
+        ("limit", True, "between 1 and 200"),
+        ("limit", 1.5, "between 1 and 200"),
+    ],
+)
+async def test_sdk_rejects_non_integer_audit_pagination(
+    parameter: str, value: object, message: str
+) -> None:
+    arguments = {parameter: value}
+    async with AegisClient("https://gateway.internal", "token") as client:
+        with pytest.raises(ValueError, match=message):
+            await client.list_audit_events(
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                **arguments,  # type: ignore[arg-type]
+            )
 
 
 @pytest.mark.parametrize("next_sequence", [None, -1, 0])
