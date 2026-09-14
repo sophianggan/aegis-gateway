@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import math
 from typing import Any
+from urllib.parse import urlsplit
 from uuid import UUID
 
 import httpx
@@ -45,7 +47,31 @@ class OpenAICompatibleModelProvider:
         timeout_seconds: float,
         client: httpx.AsyncClient | None = None,
     ) -> None:
-        self._model = model
+        parsed_url = urlsplit(base_url)
+        if (
+            parsed_url.scheme not in {"http", "https"}
+            or not parsed_url.hostname
+            or parsed_url.username is not None
+            or parsed_url.password is not None
+            or parsed_url.query
+            or parsed_url.fragment
+        ):
+            raise ValueError(
+                "model base URL must use HTTP(S) without credentials, query, or fragment"
+            )
+        if not isinstance(model, str) or not model.strip() or len(model.strip()) > 200:
+            raise ValueError("model name must contain between 1 and 200 characters")
+        if not isinstance(api_key, str):
+            raise ValueError("model API key must be a string")
+        if (
+            isinstance(timeout_seconds, bool)
+            or not isinstance(timeout_seconds, (int, float))
+            or not math.isfinite(timeout_seconds)
+            or timeout_seconds <= 0
+            or timeout_seconds > 300
+        ):
+            raise ValueError("model timeout must be finite and between 0 and 300 seconds")
+        self._model = model.strip()
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
             base_url=base_url.rstrip("/"),
