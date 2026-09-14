@@ -317,8 +317,83 @@ async def test_audit_iterator_rejects_non_progressing_cursor(
         "token",
         transport=httpx.MockTransport(lambda _: response),
     ) as client:
-        with pytest.raises(AegisClientError, match="invalid audit cursor"):
+        with pytest.raises(AegisClientError, match="invalid audit page"):
             await anext(client.iter_audit_events(request_id))
+
+
+def audit_event_payload(*, request_id: str, sequence: int) -> dict[str, object]:
+    return {
+        "id": f"00000000-0000-4000-8000-{sequence + 1:012d}",
+        "request_id": request_id,
+        "sequence": sequence,
+        "occurred_at": "2026-09-14T12:00:00Z",
+        "actor": "auditor",
+        "action": "request.complete",
+        "decision": "allow",
+        "resource_ids": [],
+        "details": {},
+        "previous_hash": "",
+        "event_hash": "0" * 64,
+    }
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {
+            "events": [
+                audit_event_payload(
+                    request_id="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", sequence=0
+                )
+            ],
+            "next_sequence": None,
+            "has_more": False,
+        },
+        {
+            "events": [
+                audit_event_payload(
+                    request_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", sequence=1
+                )
+            ],
+            "next_sequence": None,
+            "has_more": False,
+        },
+        {
+            "events": [
+                audit_event_payload(
+                    request_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", sequence=0
+                )
+            ],
+            "next_sequence": 0,
+            "has_more": False,
+        },
+    ],
+)
+async def test_sdk_rejects_inconsistent_audit_pages(payload: dict[str, object]) -> None:
+    request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload)),
+    ) as client:
+        with pytest.raises(AegisClientError, match="invalid audit page"):
+            await client.list_audit_events(request_id)
+
+
+async def test_sdk_rejects_negative_audit_event_sequence() -> None:
+    request_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    payload = {
+        "events": [audit_event_payload(request_id=request_id, sequence=-1)],
+        "next_sequence": None,
+        "has_more": False,
+    }
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(lambda _: httpx.Response(200, json=payload)),
+    ) as client:
+        with pytest.raises(AegisClientError, match="invalid response"):
+            await client.list_audit_events(request_id)
 
 
 @pytest.mark.parametrize("resource_id", ["not-a-uuid", "../records", ""])

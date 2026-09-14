@@ -117,7 +117,7 @@ class PolicyPreview(BaseModel):
 class AuditEvent(BaseModel):
     id: UUID
     request_id: UUID
-    sequence: int
+    sequence: int = Field(ge=0)
     occurred_at: datetime
     actor: str
     action: str

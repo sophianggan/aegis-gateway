@@ -90,6 +90,23 @@ def _normalize_metadata(metadata: dict[str, str] | None) -> dict[str, str]:
     return normalized
 
 
+def _validate_audit_page(
+    page: AuditPage, *, request_id: UUID, after_sequence: int
+) -> AuditPage:
+    sequences = [event.sequence for event in page.events]
+    expected_sequences = list(range(after_sequence + 1, after_sequence + 1 + len(sequences)))
+    if any(event.request_id != request_id for event in page.events):
+        raise AegisClientError("gateway returned an invalid audit page")
+    if sequences != expected_sequences:
+        raise AegisClientError("gateway returned an invalid audit page")
+    if page.has_more:
+        if not page.events or page.next_sequence != page.events[-1].sequence:
+            raise AegisClientError("gateway returned an invalid audit page")
+    elif page.next_sequence is not None:
+        raise AegisClientError("gateway returned an invalid audit page")
+    return page
+
+
 class AegisClient:
     """Small async SDK that keeps authentication and error handling consistent."""
 
@@ -199,7 +216,12 @@ class AegisClient:
             "GET",
             f"/v1/audit/{request_id}/events?after_sequence={after_sequence}&limit={limit}",
         )
-        return _validate_response(AuditPage, response)
+        page = _validate_response(AuditPage, response)
+        return _validate_audit_page(
+            page,
+            request_id=UUID(request_id),
+            after_sequence=after_sequence,
+        )
 
     async def iter_audit_events(
         self, request_id: UUID | str, *, page_size: int = 50
