@@ -4,7 +4,7 @@ import math
 import httpx
 import pytest
 
-from aegis_sdk import AegisClient, AegisClientError
+from aegis_sdk import AegisClient, AegisClientError, ClassifiedValue, RecordInput
 
 
 @pytest.mark.parametrize(
@@ -267,6 +267,34 @@ async def test_bulk_ingestion_validates_concurrency_before_request() -> None:
     async with AegisClient("https://gateway.internal", "token") as client:
         with pytest.raises(ValueError, match="between 1 and 32"):
             await client.create_records([], concurrency=0)
+
+
+async def test_bulk_ingestion_rejects_duplicate_records_before_request() -> None:
+    record = RecordInput(source="work-orders", fields={"status": ClassifiedValue(value="open")})
+
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("duplicate records must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="duplicate identifiers"):
+            await client.create_records([record, record])
+
+
+async def test_bulk_ingestion_rejects_invalid_record_types_before_request() -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid records must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="RecordInput instances"):
+            await client.create_records(["not-a-record"])  # type: ignore[list-item]
 
 
 async def test_audit_iterator_rejects_invalid_page_size_before_request() -> None:

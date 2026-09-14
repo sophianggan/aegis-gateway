@@ -260,6 +260,11 @@ class AegisClient:
     ) -> list[RecordReceipt]:
         if concurrency < 1 or concurrency > 32:
             raise ValueError("concurrency must be between 1 and 32")
+        if any(not isinstance(record, RecordInput) for record in records):
+            raise ValueError("records must contain only RecordInput instances")
+        record_ids = [record.id for record in records]
+        if len(record_ids) != len(set(record_ids)):
+            raise ValueError("records must not contain duplicate identifiers")
         semaphore = asyncio.Semaphore(concurrency)
 
         async def create(record: RecordInput) -> RecordReceipt:
