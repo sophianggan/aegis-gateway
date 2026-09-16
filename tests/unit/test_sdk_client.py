@@ -545,3 +545,30 @@ async def test_sdk_rejects_invalid_revocation_inputs_before_request(
     ) as client:
         with pytest.raises(ValueError, match=message):
             await client.revoke_token(token_id, reason_code=reason_code)
+
+
+@pytest.mark.parametrize(
+    ("token_id", "reason_code", "message"),
+    [
+        (None, "administrative", "token_id must be a string"),
+        (123, "administrative", "token_id must be a string"),
+        ("token-1", None, "reason_code must be a string"),
+        ("token-1", 123, "reason_code must be a string"),
+    ],
+)
+async def test_sdk_rejects_non_string_revocation_inputs(
+    token_id: object, reason_code: object, message: str
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid revocation input must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match=message):
+            await client.revoke_token(  # type: ignore[arg-type]
+                token_id,
+                reason_code=reason_code,
+            )

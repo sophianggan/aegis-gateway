@@ -273,6 +273,10 @@ class AegisClient:
     async def revoke_token(
         self, token_id: str, *, reason_code: str = "administrative"
     ) -> TokenRevocationReceipt:
+        if not isinstance(token_id, str):
+            raise ValueError("token_id must be a string")
+        if not isinstance(reason_code, str):
+            raise ValueError("reason_code must be a string")
         normalized_token_id = token_id.strip()
         if not normalized_token_id or len(normalized_token_id) > 200:
             raise ValueError("token_id must contain between 1 and 200 characters")
