@@ -135,8 +135,12 @@ class AuditTrail:
     async def page(
         self, request_id: UUID, *, after_sequence: int = -1, limit: int = 50
     ) -> AuditPage:
+        if isinstance(after_sequence, bool) or not isinstance(after_sequence, int):
+            raise ValueError("after_sequence must be an integer at least -1")
         if after_sequence < -1:
             raise ValueError("after_sequence must be at least -1")
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise ValueError("limit must be an integer between 1 and 200")
         if limit < 1 or limit > 200:
             raise ValueError("limit must be between 1 and 200")
         events = await self._repository.page(

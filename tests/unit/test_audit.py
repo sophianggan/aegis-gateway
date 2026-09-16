@@ -157,3 +157,21 @@ async def test_audit_page_rejects_invalid_bounds(
 
     with pytest.raises(ValueError, match=message):
         await trail.page(uuid4(), after_sequence=after_sequence, limit=limit)
+
+
+@pytest.mark.parametrize(
+    ("parameter", "value", "message"),
+    [
+        ("after_sequence", True, "integer at least -1"),
+        ("after_sequence", 1.5, "integer at least -1"),
+        ("limit", True, "integer between 1 and 200"),
+        ("limit", 1.5, "integer between 1 and 200"),
+    ],
+)
+async def test_audit_page_rejects_non_integer_bounds(
+    parameter: str, value: object, message: str
+) -> None:
+    trail = AuditTrail(InMemoryAuditRepository(), "audit-test-key-that-is-long")
+
+    with pytest.raises(ValueError, match=message):
+        await trail.page(uuid4(), **{parameter: value})  # type: ignore[arg-type]
