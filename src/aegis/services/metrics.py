@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import math
+import re
 from collections import Counter, defaultdict
 from threading import Lock
+
+_METHOD_PATTERN = re.compile(r"[A-Za-z][A-Za-z0-9!#$%&'*+.^_`|~-]{0,31}")
 
 
 class MetricsRegistry:
@@ -21,6 +24,14 @@ class MetricsRegistry:
             raise ValueError("HTTP metric duration must be finite and non-negative")
         if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
             raise ValueError("HTTP metric status must be an integer between 100 and 599")
+        if not isinstance(method, str) or not _METHOD_PATTERN.fullmatch(method):
+            raise ValueError("HTTP metric method must be a valid 1-32 character token")
+        if (
+            not isinstance(route, str)
+            or len(route) > 200
+            or any(character in route for character in "\r\n\0")
+        ):
+            raise ValueError("HTTP metric route must be a control-free string up to 200 characters")
         normalized_method = method.upper()[:12]
         normalized_route = route if route.startswith("/") else "unmatched"
         key = (normalized_method, normalized_route)

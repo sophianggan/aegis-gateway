@@ -23,14 +23,14 @@ def test_renders_counters_and_cumulative_histogram() -> None:
 def test_escapes_label_values_and_bounds_method_cardinality() -> None:
     registry = MetricsRegistry()
     registry.observe_http(
-        method='unexpected-method-name"',
-        route='/unsafe\nroute"',
+        method="unexpected-method-name",
+        route='/unsafe\\route"',
         status=404,
         duration=10,
     )
     output = registry.render()
     assert "UNEXPECTED-M" in output
-    assert '\\nroute\\"' in output
+    assert '\\\\route\\"' in output
     assert 'route="unmatched"' not in output
 
 
@@ -57,3 +57,30 @@ def test_rejects_invalid_http_statuses(status: object) -> None:
         )
 
     assert 'method="GET"' not in registry.render()
+
+
+@pytest.mark.parametrize(
+    ("method", "route", "message"),
+    [
+        ("", "/health", "method"),
+        ("GET\nInjected", "/health", "method"),
+        (123, "/health", "method"),
+        ("GET", "/health\ninjected", "route"),
+        ("GET", "/" + "x" * 200, "route"),
+        ("GET", None, "route"),
+    ],
+)
+def test_rejects_invalid_http_metric_labels(
+    method: object, route: object, message: str
+) -> None:
+    registry = MetricsRegistry()
+
+    with pytest.raises(ValueError, match=message):
+        registry.observe_http(
+            method=method,  # type: ignore[arg-type]
+            route=route,  # type: ignore[arg-type]
+            status=200,
+            duration=0.01,
+        )
+
+    assert "aegis_http_requests_total{" not in registry.render()
