@@ -19,6 +19,8 @@ class MetricsRegistry:
     def observe_http(self, *, method: str, route: str, status: int, duration: float) -> None:
         if not math.isfinite(duration) or duration < 0:
             raise ValueError("HTTP metric duration must be finite and non-negative")
+        if isinstance(status, bool) or not isinstance(status, int) or not 100 <= status <= 599:
+            raise ValueError("HTTP metric status must be an integer between 100 and 599")
         normalized_method = method.upper()[:12]
         normalized_route = route if route.startswith("/") else "unmatched"
         key = (normalized_method, normalized_route)

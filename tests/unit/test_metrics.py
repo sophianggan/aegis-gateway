@@ -42,3 +42,18 @@ def test_rejects_invalid_durations(duration: float) -> None:
         registry.observe_http(method="GET", route="/health", status=200, duration=duration)
 
     assert 'method="GET"' not in registry.render()
+
+
+@pytest.mark.parametrize("status", [99, 600, True, 200.0, "200"])
+def test_rejects_invalid_http_statuses(status: object) -> None:
+    registry = MetricsRegistry()
+
+    with pytest.raises(ValueError, match="integer between 100 and 599"):
+        registry.observe_http(
+            method="GET",
+            route="/health",
+            status=status,  # type: ignore[arg-type]
+            duration=0.01,
+        )
+
+    assert 'method="GET"' not in registry.render()
