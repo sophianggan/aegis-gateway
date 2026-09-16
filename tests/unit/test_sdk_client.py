@@ -107,6 +107,20 @@ async def test_sdk_rejects_non_string_token_provider_result() -> None:
             await client.query("status")
 
 
+@pytest.mark.parametrize("token", ["token\ninjected", "töken", "x" * 4097])
+async def test_sdk_rejects_unsafe_authentication_tokens(token: str) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("unsafe credentials must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        token,
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(AegisClientError, match="printable ASCII"):
+            await client.query("status")
+
+
 @pytest.mark.parametrize("question", ["", "   ", "\r\n\t"])
 async def test_sdk_rejects_blank_questions_before_request(question: str) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:

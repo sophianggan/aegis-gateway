@@ -26,6 +26,7 @@ from aegis_sdk.models import (
 )
 
 TokenProvider = Callable[[], str | Awaitable[str]]
+_AUTH_TOKEN_PATTERN = re.compile(r"[\x21-\x7e]{1,4096}")
 _CORRELATION_ID_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 _REVOCATION_REASON_PATTERN = re.compile(r"[a-z0-9][a-z0-9-]{1,49}")
 ResponseModel = TypeVar("ResponseModel", bound=BaseModel)
@@ -320,6 +321,10 @@ class AegisClient:
         normalized = resolved.strip()
         if not normalized:
             raise AegisClientError("authentication token must not be blank")
+        if not _AUTH_TOKEN_PATTERN.fullmatch(normalized):
+            raise AegisClientError(
+                "authentication token must contain 1-4096 printable ASCII characters"
+            )
         return normalized
 
     async def _request(
