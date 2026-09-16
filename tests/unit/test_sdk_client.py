@@ -157,6 +157,25 @@ async def test_sdk_trims_query_purpose_before_request() -> None:
         await client.query("status", purpose="  incident response  ")
 
 
+@pytest.mark.parametrize("require_all_records", [0, 1, "true", None])
+async def test_sdk_rejects_non_boolean_record_requirement(
+    require_all_records: object,
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid query flags must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="require_all_records must be a boolean"):
+            await client.query(
+                "status",
+                require_all_records=require_all_records,  # type: ignore[arg-type]
+            )
+
+
 @pytest.mark.parametrize(
     ("metadata", "message"),
     [

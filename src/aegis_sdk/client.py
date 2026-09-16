@@ -170,6 +170,8 @@ class AegisClient:
             raise ValueError("question must be a non-blank string")
         if not isinstance(purpose, str) or not purpose.strip() or len(purpose.strip()) > 200:
             raise ValueError("purpose must contain between 1 and 200 characters")
+        if not isinstance(require_all_records, bool):
+            raise ValueError("require_all_records must be a boolean")
         formatted_record_ids = _format_resource_ids(record_ids, name="record_id")
         normalized_metadata = _normalize_metadata(metadata)
         response = await self._request(
