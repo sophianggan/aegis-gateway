@@ -28,6 +28,16 @@ def _normalize_source(source: str) -> str:
     return normalized
 
 
+def _normalize_labels(value: Any, *, name: str) -> frozenset[str]:
+    if value is None:
+        return frozenset()
+    if not isinstance(value, (list, tuple, set, frozenset)) or any(
+        not isinstance(item, str) for item in value
+    ):
+        raise ValueError(f"{name} must be a collection of strings")
+    return frozenset(item.strip().lower() for item in value if item.strip())
+
+
 class Classification(IntEnum):
     """Ordered sensitivity labels; a principal may access its level and below."""
 
@@ -77,9 +87,7 @@ class Principal(BaseModel):
     @field_validator("compartments", "roles", mode="before")
     @classmethod
     def normalize_sets(cls, value: Any) -> frozenset[str]:
-        normalized = frozenset(
-            str(item).strip().lower() for item in (value or []) if str(item).strip()
-        )
+        normalized = _normalize_labels(value, name="roles and compartments")
         if any(len(item) > 64 for item in normalized):
             raise ValueError("role and compartment names must contain at most 64 characters")
         return normalized
@@ -103,9 +111,7 @@ class DataField(BaseModel):
     @field_validator("compartments", mode="before")
     @classmethod
     def normalize_compartments(cls, value: Any) -> frozenset[str]:
-        normalized = frozenset(
-            str(item).strip().lower() for item in (value or []) if str(item).strip()
-        )
+        normalized = _normalize_labels(value, name="compartments")
         if any(len(item) > 64 for item in normalized):
             raise ValueError("compartment names must contain at most 64 characters")
         return normalized

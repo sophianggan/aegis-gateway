@@ -28,7 +28,9 @@ class ClassifiedValue(BaseModel):
             return set()
         if not isinstance(value, (list, tuple, set, frozenset)):
             return value
-        normalized = {str(item).strip().lower() for item in value if str(item).strip()}
+        if any(not isinstance(item, str) for item in value):
+            raise ValueError("compartments must contain only strings")
+        normalized = {item.strip().lower() for item in value if item.strip()}
         if any(len(item) > 64 for item in normalized):
             raise ValueError("compartment names must contain at most 64 characters")
         return normalized

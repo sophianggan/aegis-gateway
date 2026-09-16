@@ -47,3 +47,9 @@ def test_sdk_record_rejects_too_many_compartments() -> None:
 def test_sdk_record_rejects_string_as_compartment_collection() -> None:
     with pytest.raises(ValidationError, match="valid set"):
         ClassifiedValue(value="open", compartments="operations")  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("compartments", [["operations", 7], [None], [True]])
+def test_sdk_record_rejects_non_string_compartment_items(compartments: object) -> None:
+    with pytest.raises(ValidationError, match="must contain only strings"):
+        ClassifiedValue(value="open", compartments=compartments)  # type: ignore[arg-type]

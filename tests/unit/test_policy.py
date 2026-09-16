@@ -103,3 +103,22 @@ def test_policy_preview_rejects_duplicate_record_identifiers() -> None:
 
     with pytest.raises(ValidationError, match="must not contain duplicates"):
         PolicyPreviewRequest(record_ids=[record_id, record_id])
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: Principal(
+            subject="analyst",
+            clearance=Classification.INTERNAL,
+            roles=["auditor", 7],  # type: ignore[list-item]
+        ),
+        lambda: DataField(
+            value="controlled",
+            compartments=["operations", 7],  # type: ignore[list-item]
+        ),
+    ],
+)
+def test_policy_models_reject_non_string_authorization_labels(factory: object) -> None:
+    with pytest.raises(ValidationError, match="collection of strings"):
+        factory()  # type: ignore[operator]
