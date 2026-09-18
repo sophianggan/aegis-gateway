@@ -238,8 +238,8 @@ async def test_sdk_normalizes_query_metadata_before_request() -> None:
         await client.query("status", metadata={" Region ": " east "})
 
 
-@pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129])
-async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
+@pytest.mark.parametrize("correlation_id", ["", "bad\nheader", "x" * 129, 123, True])
+async def test_sdk_rejects_unsafe_correlation_id(correlation_id: object) -> None:
     def unexpected_request(_: httpx.Request) -> httpx.Response:
         raise AssertionError("unsafe correlation IDs must fail before transport")
 
@@ -249,7 +249,10 @@ async def test_sdk_rejects_unsafe_correlation_id(correlation_id: str) -> None:
         transport=httpx.MockTransport(unexpected_request),
     ) as client:
         with pytest.raises(AegisClientError, match="header-safe"):
-            await client.query("status", correlation_id=correlation_id)
+            await client.query(
+                "status",
+                correlation_id=correlation_id,  # type: ignore[arg-type]
+            )
 
 
 @pytest.mark.parametrize(

@@ -341,7 +341,9 @@ class AegisClient:
     ) -> dict[str, Any]:
         if correlation_id is None:
             request_id = str(uuid4())
-        elif _CORRELATION_ID_PATTERN.fullmatch(correlation_id):
+        elif isinstance(correlation_id, str) and _CORRELATION_ID_PATTERN.fullmatch(
+            correlation_id
+        ):
             request_id = correlation_id
         else:
             raise AegisClientError("correlation_id must contain 1-128 header-safe characters")
