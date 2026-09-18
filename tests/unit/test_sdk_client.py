@@ -487,6 +487,25 @@ async def test_sdk_rejects_invalid_body_resource_ids_before_request() -> None:
             await client.query("status", record_ids=["not-a-uuid"])
 
 
+@pytest.mark.parametrize("record_ids", ["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", None, {"id": 1}])
+async def test_sdk_rejects_invalid_resource_id_collections_before_request(
+    record_ids: object,
+) -> None:
+    def unexpected_request(_: httpx.Request) -> httpx.Response:
+        raise AssertionError("invalid resource ID collections must fail before transport")
+
+    async with AegisClient(
+        "https://gateway.internal",
+        "token",
+        transport=httpx.MockTransport(unexpected_request),
+    ) as client:
+        with pytest.raises(ValueError, match="sequence of UUIDs"):
+            await client.query(
+                "status",
+                record_ids=record_ids,  # type: ignore[arg-type]
+            )
+
+
 async def test_sdk_rejects_duplicate_body_resource_ids_before_request() -> None:
     record_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 

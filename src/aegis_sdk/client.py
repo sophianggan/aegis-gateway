@@ -62,6 +62,8 @@ def _format_resource_ids(
     minimum: int = 0,
     maximum: int = 100,
 ) -> list[str]:
+    if isinstance(values, (str, bytes)) or not isinstance(values, Sequence):
+        raise ValueError(f"{name}s must be a sequence of UUIDs")
     if len(values) < minimum or len(values) > maximum:
         raise ValueError(f"{name}s must contain between {minimum} and {maximum} items")
     formatted = [_format_resource_id(value, name=name) for value in values]
