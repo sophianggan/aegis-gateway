@@ -1,7 +1,15 @@
+from uuid import uuid4
+
 import pytest
 from pydantic import ValidationError
 
-from aegis_sdk import ClassifiedValue, RecordInput
+from aegis_sdk import (
+    AuditPage,
+    ClassifiedValue,
+    RecordDeletionReceipt,
+    RecordInput,
+    TokenRevocationReceipt,
+)
 
 
 def test_sdk_record_normalizes_source_and_compartments() -> None:
@@ -59,3 +67,21 @@ def test_sdk_record_rejects_non_string_compartment_items(compartments: object) -
 def test_sdk_record_rejects_coerced_exportable_flags(exportable: object) -> None:
     with pytest.raises(ValidationError, match="valid boolean"):
         ClassifiedValue(value="open", exportable=exportable)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("value", [0, 1, "false", "true"])
+def test_sdk_responses_reject_coerced_booleans(value: object) -> None:
+    request_id = uuid4()
+    with pytest.raises(ValidationError, match="valid boolean"):
+        RecordDeletionReceipt(
+            request_id=request_id,
+            record_id=uuid4(),
+            deleted=value,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValidationError, match="valid boolean"):
+        TokenRevocationReceipt(
+            request_id=request_id,
+            revoked=value,  # type: ignore[arg-type]
+        )
+    with pytest.raises(ValidationError, match="valid boolean"):
+        AuditPage(events=[], next_sequence=None, has_more=value)  # type: ignore[arg-type]

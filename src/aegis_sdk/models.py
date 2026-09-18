@@ -78,12 +78,12 @@ class RecordReceipt(BaseModel):
 class RecordDeletionReceipt(BaseModel):
     request_id: UUID
     record_id: UUID
-    deleted: bool
+    deleted: bool = Field(strict=True)
 
 
 class TokenRevocationReceipt(BaseModel):
     request_id: UUID
-    revoked: bool
+    revoked: bool = Field(strict=True)
 
 
 class Citation(BaseModel):
@@ -148,7 +148,7 @@ class AuditVerification(BaseModel):
 class AuditPage(BaseModel):
     events: list[AuditEvent]
     next_sequence: int | None
-    has_more: bool
+    has_more: bool = Field(strict=True)
 
 
 class AuditCheckpoint(BaseModel):
