@@ -19,7 +19,7 @@ class ClassifiedValue(BaseModel):
     value: Any
     classification: Classification = Classification.INTERNAL
     compartments: set[str] = Field(default_factory=set, max_length=50)
-    exportable: bool = True
+    exportable: bool = Field(default=True, strict=True)
 
     @field_validator("compartments", mode="before")
     @classmethod

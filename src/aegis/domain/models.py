@@ -101,7 +101,7 @@ class DataField(BaseModel):
     value: Any
     classification: Classification = Classification.INTERNAL
     compartments: frozenset[str] = Field(default_factory=frozenset, max_length=50)
-    exportable: bool = True
+    exportable: bool = Field(default=True, strict=True)
 
     @field_validator("classification", mode="before")
     @classmethod
@@ -223,7 +223,7 @@ class QueryRequest(BaseModel):
     record_ids: list[UUID] = Field(default_factory=list, max_length=100)
     purpose: str = Field(default="analysis", min_length=1, max_length=200)
     metadata: dict[str, str] = Field(default_factory=dict, max_length=20)
-    require_all_records: bool = False
+    require_all_records: bool = Field(default=False, strict=True)
 
     @field_validator("query")
     @classmethod

@@ -53,3 +53,9 @@ def test_sdk_record_rejects_string_as_compartment_collection() -> None:
 def test_sdk_record_rejects_non_string_compartment_items(compartments: object) -> None:
     with pytest.raises(ValidationError, match="must contain only strings"):
         ClassifiedValue(value="open", compartments=compartments)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("exportable", [0, 1, "false", "true"])
+def test_sdk_record_rejects_coerced_exportable_flags(exportable: object) -> None:
+    with pytest.raises(ValidationError, match="valid boolean"):
+        ClassifiedValue(value="open", exportable=exportable)  # type: ignore[arg-type]

@@ -9,6 +9,7 @@ from aegis.domain.models import (
     Decision,
     PolicyPreviewRequest,
     Principal,
+    QueryRequest,
     Record,
 )
 from aegis.services.policy import PolicyEngine
@@ -122,3 +123,12 @@ def test_policy_preview_rejects_duplicate_record_identifiers() -> None:
 def test_policy_models_reject_non_string_authorization_labels(factory: object) -> None:
     with pytest.raises(ValidationError, match="collection of strings"):
         factory()  # type: ignore[operator]
+
+
+@pytest.mark.parametrize("value", [0, 1, "false", "true"])
+def test_policy_models_reject_coerced_booleans(value: object) -> None:
+    with pytest.raises(ValidationError, match="valid boolean"):
+        DataField(value="controlled", exportable=value)  # type: ignore[arg-type]
+
+    with pytest.raises(ValidationError, match="valid boolean"):
+        QueryRequest(query="status", require_all_records=value)  # type: ignore[arg-type]
