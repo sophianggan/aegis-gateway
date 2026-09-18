@@ -1,13 +1,20 @@
+from collections.abc import Callable
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
 from aegis_sdk import (
+    AuditBundle,
+    AuditCheckpoint,
     AuditPage,
+    Classification,
     ClassifiedValue,
+    QueryResult,
     RecordDeletionReceipt,
     RecordInput,
+    RecordReceipt,
     TokenRevocationReceipt,
 )
 
@@ -85,3 +92,59 @@ def test_sdk_responses_reject_coerced_booleans(value: object) -> None:
         )
     with pytest.raises(ValidationError, match="valid boolean"):
         AuditPage(events=[], next_sequence=None, has_more=value)  # type: ignore[arg-type]
+
+
+def invalid_count_responses(value: object) -> list[Callable[[], object]]:
+    request_id = uuid4()
+    return [
+        lambda: RecordReceipt(
+            request_id=request_id,
+            record_id=uuid4(),
+            field_count=value,  # type: ignore[arg-type]
+            highest_classification=Classification.INTERNAL,
+            integrity_algorithm="HMAC-SHA256",
+            integrity_digest="0" * 64,
+        ),
+        lambda: QueryResult(
+            request_id=request_id,
+            answer="ok",
+            citations=[],
+            filtered_field_count=value,  # type: ignore[arg-type]
+            policy_summary="passed",
+        ),
+        lambda: AuditBundle(
+            version="aegis.audit.v1",
+            request_id=request_id,
+            generated_at=datetime.now(UTC),
+            event_count=value,  # type: ignore[arg-type]
+            chain_head="0" * 64,
+            events=[],
+            signature_algorithm="HMAC-SHA256",
+            bundle_signature="0" * 64,
+        ),
+        lambda: AuditCheckpoint(
+            version="aegis.checkpoint.v1",
+            request_id=request_id,
+            generated_at=datetime.now(UTC),
+            event_count=value,  # type: ignore[arg-type]
+            chain_head="0" * 64,
+            signature_algorithm="HMAC-SHA256",
+            signature="0" * 64,
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("value", "message"),
+    [(-1, "greater than or equal"), ("1", "valid integer")],
+)
+def test_sdk_responses_reject_invalid_counts(value: object, message: str) -> None:
+    for factory in invalid_count_responses(value):
+        with pytest.raises(ValidationError, match=message):
+            factory()
+
+
+def test_sdk_record_receipt_rejects_zero_fields() -> None:
+    factory = invalid_count_responses(0)[0]
+    with pytest.raises(ValidationError, match="greater than or equal"):
+        factory()

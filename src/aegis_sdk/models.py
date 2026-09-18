@@ -69,7 +69,7 @@ class RecordInput(BaseModel):
 class RecordReceipt(BaseModel):
     request_id: UUID
     record_id: UUID
-    field_count: int
+    field_count: int = Field(ge=1, le=200, strict=True)
     highest_classification: Classification
     integrity_algorithm: Literal["HMAC-SHA256"]
     integrity_digest: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -96,7 +96,7 @@ class QueryResult(BaseModel):
     request_id: UUID
     answer: str
     citations: list[Citation]
-    filtered_field_count: int
+    filtered_field_count: int = Field(ge=0, strict=True)
     policy_summary: str
     missing_record_ids: list[UUID] = Field(default_factory=list)
 
@@ -134,7 +134,7 @@ class AuditBundle(BaseModel):
     version: Literal["aegis.audit.v1"]
     request_id: UUID
     generated_at: datetime
-    event_count: int
+    event_count: int = Field(ge=1, strict=True)
     chain_head: str
     events: list[AuditEvent]
     signature_algorithm: Literal["HMAC-SHA256"]
@@ -155,7 +155,7 @@ class AuditCheckpoint(BaseModel):
     version: Literal["aegis.checkpoint.v1"]
     request_id: UUID
     generated_at: datetime
-    event_count: int
+    event_count: int = Field(ge=1, strict=True)
     chain_head: str
     signature_algorithm: Literal["HMAC-SHA256"]
     signature: str
