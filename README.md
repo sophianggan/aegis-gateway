@@ -131,9 +131,15 @@ pytest -m redteam tests/redteam
 docker build -t aegis-gateway:local .
 ```
 
-The current suite contains 97 standard tests plus a live PostgreSQL integration test and
-enforces at least 85% branch-aware coverage. CI also performs dependency auditing, builds
-an immutable container, and publishes a checksummed wheel/SBOM evidence bundle.
+The current suite contains more than 300 automated checks plus a live PostgreSQL
+integration test and enforces at least 85% branch-aware coverage. CI also performs
+dependency auditing, builds an immutable container, and publishes a checksummed
+wheel/SBOM evidence bundle.
+
+Remove generated test, coverage, and build artifacts with `make clean`. Use
+`make clean-all` when the local virtual environment and downloaded Terraform provider
+cache should also be discarded. Both targets preserve local environment configuration
+and Terraform state.
 
 ## Repository map
 
